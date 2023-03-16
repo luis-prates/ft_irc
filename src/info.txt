@@ -1,0 +1,154 @@
+
+RFC 2810
+RFC 2811
+RFC 2812
+RFC 2813
+
+NETWORK
+OSI 7 Layers Model (Open Systems Interconnection)
+Send information from one application to another application via a network
+
+		------------------												-------------------				
+		|			SENDER:			|												|			RECEIVER:		|
+		------------------												-------------------
+		|		application		|----- Game events -----|		Application		| -> Input Updates, State Updates
+		 				v																					^
+		|		Presentation	|-- Game Packetization -|		Presentation	|	-> Serialization, Buffering
+		 				v																					^
+		|		Session				|Connection/DataExchange|		Session				|	-> Sockets
+						v					 																^
+		|		Transport			|												|		Transport			|	-> TCP, UDP
+						v					-------------------------				^
+		|		Network				|	Network	->	Network		|		Network				|	-> IP)
+						v								^						v 						^
+		|		Data Link			|	Data Link		Data Link	|		Data Link			|	-> Ethernet (MAC)
+						v								^						v							^
+		|		Physical		->	Physical		Physical	->	Physical			|	-> Wired, Fiber Optics, Wireless
+		-------------------------------------------------------------
+											|					ROUTER:				|
+											-------------------------
+
+NETWORK:
+The connections is only between two devices
+One application is the client and the other is the server
+The server listens to a port number waiting requests from the server,
+Both the server and client use an IP and port number
+IP addresses are configured during Network setup
+The Loopback address 127.0.0.1 refers to the current machine.
+This can be used during development to test both client and server on a single machine
+Different machines use different IPs and those must be configured in the network
+
+----------------------------------------------------------------------------------------------------
+
+PORTS:
+A port will be allocated to the sockets
+It is recommended to choose a number over 1024
+Ports 1...1023 are described as well known ports
+and are reserved for specific applications (port 21 FTP)
+IPs can be bind to ports
+
+----------------------------------------------------------------------------------------------------
+
+SOCKETS:
+Facilitate two-way connections (pipes) between nodes in the network
+Both sides of the connection use sockets
+Sockets can both recieve and send data
+@types:
+- Streaming sockets (SOCK_STREAM)  use TCP (the more secure connection)
+- Datagram socket (SOCK_DGRAM) uses UDP (less reliable and secured)
+
+@creation:
+1. Create: The server creates a new socket (Status:Unbound)
+2. Bind: Bind the server to a valid IP address and port number (Status:Bound)
+3. Listen: The socket is put into listening state,
+	 waiting for incoming connections on the port (Status:Listening)
+4. Client: Repeat steps 1 and 2 (in the client case, the port is dynamically allocated)
+5. When the server "sees" that the client wants to make a connection,
+		it replicates itself (in its bound state) to simultaneously be connected to the client
+		and also listening to other connections
+
+----------------------------------------------------------------------------------------------------
+
+FUNCTIONS:
+int socket(int domain, int type, int protocol);
+domain: The address family specification (AF_INET for TCP or UDP)
+type:		The type specification for the new socket (SOCK_STREAM for TCP)
+protocol: The protocol to be used (IPPROTO_TCP for TCP)
+
+----------------------------------------------------------------------------------------------------
+
+MESSAGES:
+[prefix](optional) [command] [command params] (max 15)
+
+The prefix is indicated with ':'and should be the first character of the message
+Prefix is used by servers to indicate the true origin of the message.
+If a prefix is not in the server database it must be discarded
+
+The command must be a valid IRC command or a three digit number (ASCII text)
+
+Messages are lines of characters terminated with a CR-LF (carriage return - line feed) pair
+(max len 512 including CR-LF (510))
+In some protocols LF or CR anywhere in a message marks the end of that message
+in others, CR-LF is required
+
+Numeric replies are only sent by servers
+[sender prefix] [3 digits] [target]
+
+The server must be able to parse messages from clients returning any appropriate errors.
+It the server encounters a fatal error while parsing a message, an error must be sent back
+to the client ans the parsing terminated.
+
+----------------------------------------------------------------------------------------------------
+
+CONNECTIONS:
+
+To detect when a connection has died or become unresponsive, the server must poll each of
+its connections. The PING command is used if the server doesn't get a response.
+If a connection doesn't respond in time, its connection is closed using appropriate procedures.
+
+	Users
+	When a server successfully registers a new connection, it is required to send to the user
+	messages stating: 
+	- the user identifiers upon which it was registered (RPL_WELCOME)
+	- the server name and version (RPL_YOURHOST)
+	- the server birth information (RPL_CREATED)
+	- available user and channel modes (RPL_MYINFO)
+	- optionally it can send an introductory message
+
+When a client connection unexpectedly closes, a QUIT message is generated on behalf of the client
+by the server to which the client was connected. 
+
+	Registration:
+		1. Pass message (set a connection password)
+				Command: PASS + Parameters: <password>  -> Example: PASS secretpassword
+				Possible server numeric replies: ERR_NEEDMOREPARAMS | ERR_ALREADYREGISTERED
+		2. Nick message
+				Command: NICK + parameter: <nickname> -> Example: NICK Wiz
+				Possible server numeric replies:
+					ERR_NONICKNAMEGIVEN | ERR_NICKNAMEINUSE | ERR_UNAVAILRESOURCE
+					ERR_ERRONEUSNICKNAME | ERR_NICKCOLLISION | ERR_RESTRICTED 
+		3. User message
+				Command: USER + parameter: <User> <mode> <unused> <realname>
+				Possible server numeric replies:
+					ERR_NEEDMOREPARAMS | ERR_ALREADYREGISTERED
+
+		Other User messages:
+			Operator message -> OPER <name> <password>
+			User mode message -> MODE <nickname> <mode flags>
+				flags:
+					a - away; i - invisible; w - wallops; r - restricted;
+					o - operator; O - local operator; s - server notices;
+
+		See Macros.hpp for more...
+
+----------------------------------------------------------------------------------------------------
+
+MAN:
+
+@tcp:
+tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
+
+@socket:	
+AF_INET: IPv4 Internet protocols ip(7)
+AF_INET6: IPv6 Internet protocols ipv6(7)
+SOCK_STREAM:	Provides sequenced, reliable, two-way, connection-based byte streams.
