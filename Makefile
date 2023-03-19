@@ -1,7 +1,7 @@
 NAME						:=		ircserv
 
 PATH_SRC				:=		src
-PATH_INC				:=		inc
+PATH_INC				:=		includes
 PATH_BUILD			:=		build
 
 SRCS						:=		$(shell find $(PATH_SRC) -name *.cpp)
@@ -11,7 +11,7 @@ INC_DIRS				:=		$(shell find $(PATH_INC) -type d)
 
 CC							:=		c++
 
-FLAG_WARN				:=		-Wall -Wextra -Werror
+FLAG_WARN				:=		#-Wall -Wextra -Werror
 FLAG_SHADOW			:=		-Wshadow -Wno-shadow	
 FLAG_STD				:=		-std=c++98
 FLAG_MAKE				:=		-MMD -MP

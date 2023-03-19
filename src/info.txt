@@ -152,3 +152,16 @@ tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
 AF_INET: IPv4 Internet protocols ip(7)
 AF_INET6: IPv6 Internet protocols ipv6(7)
 SOCK_STREAM:	Provides sequenced, reliable, two-way, connection-based byte streams.
+
+htons, htonl, ntohs, ntohl - Convert multi-byte integer types from host byte order to network byte order
+https://www.gta.ufrj.br/ensino/eel878/sockets/htonsman.html
+
+htons() - host to network short
+
+htonl() - host to network long
+
+ntohs() - network to host short
+
+ntohl() - network to host long
+
+implement local and global operators. Implement command to turn user into operator
