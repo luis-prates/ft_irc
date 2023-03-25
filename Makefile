@@ -26,8 +26,8 @@ RM							:=		rm -rf
 _YELLOW					:=		\e[38;5;184m
 _GREEN					:=		\e[38;5;46m
 _RESET					:=		\e[0m
-_INFO						:=		\$(_YELLOW)INFO$(_RESET)]
-_SUCCESS				:=		\$(_GREEN)SUCCESS$(_RESET)]
+_INFO						:=		[\$(_YELLOW)INFO$(_RESET)]
+_SUCCESS				:=		[\$(_GREEN)SUCCESS$(_RESET)]
 
 all:						init $(NAME)
 								@ printf "$(_SUCCESS) Compilation done\n"

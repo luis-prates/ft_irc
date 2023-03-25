@@ -6,7 +6,7 @@
 /*   By: lprates <lprates@student.42lisboa.com>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/18 15:17:37 by lprates           #+#    #+#             */
-/*   Updated: 2023/03/19 01:03:01 by lprates          ###   ########.fr       */
+/*   Updated: 2023/03/25 18:50:04 by lprates          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,12 +26,18 @@
 # include <unistd.h>
 # include <sys/time.h>
 # include <cerrno>
+# include <sys/epoll.h>
+# include <cstdio>
+# include <cstring>
 
 # include "Client.hpp"
 
 # define MAX_CONNECTIONS 500
-# define BUFFER_SIZE 1024
+// have to check if 1024 or 1025
+# define BUFFER_SIZE 1025
 # define MAX_CLIENTS 100
+# define TRUE   1 
+# define FALSE  0 
 
 /*struct Client {
 	int socket; // client socket file descriptor
