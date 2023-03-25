@@ -110,9 +110,9 @@ int main (int argc, char* argv[]) {
 			}
 				
 			//inform user of socket number - used in send and receive commands
-			printf("New connection , socket fd is %d , ip is : %s , port : %d \n",\
-					newSocket , inet_ntoa(serverAddress.sin_addr), \
-					ntohs(serverAddress.sin_port));
+			std::cout << "New connection, socket fd is " << newSocket << \
+					", ip is: " << inet_ntoa(serverAddress.sin_addr) << \
+					", port: " << ntohs(serverAddress.sin_port) << std::endl;
 			
 			//send new connection greeting message
 			if( send(newSocket, message.c_str(), message.size(), 0) != message.size() )
@@ -131,7 +131,7 @@ int main (int argc, char* argv[]) {
 					clients[i].setSocketFd(newSocket);
 					clients[i].setIpAddress(inet_ntoa(serverAddress.sin_addr));
 					clients[i].setPort(ntohs(serverAddress.sin_port));
-					printf("Adding to list of sockets as %d\n" , i);
+					std::cout << "Adding to list of sockets as " << i << std::endl;
 
 					break;
 				}
@@ -148,18 +148,8 @@ int main (int argc, char* argv[]) {
 				//incoming message
 				if ((valread = read( sd , buffer, 1024)) == 0)
 				{
-					//Somebody disconnected , get his details and print
-					getpeername(sd , (struct sockaddr*)&serverAddress , \
-						(socklen_t*)&addrlen);
-					int rc = getsockname(sd , (struct sockaddr*)&serverAddress , \
-						(socklen_t*)&addrlen);
-					if (rc < 0)
-					{
-						std::cerr << "Error: Failed to get socket name\n";
-						perror("getsockname");
-					}
-					printf("Host disconnected , ip %s , port %d \n" ,
-							clients[i].getIpAddress() , clients[i].getPort());
+					std::cout << "Host disconnected, ip: " << clients[i].getIpAddress() << \
+							" port:" << clients[i].getPort() << std::endl;
 							
 					//Close the socket and mark as 0 in list for reuse
 					close( sd );
