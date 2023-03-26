@@ -6,7 +6,7 @@
 /*   By: lprates <lprates@student.42lisboa.com>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/18 15:17:37 by lprates           #+#    #+#             */
-/*   Updated: 2023/03/25 18:50:04 by lprates          ###   ########.fr       */
+/*   Updated: 2023/03/26 03:18:59 by lprates          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,8 @@
 # include <sys/epoll.h>
 # include <cstdio>
 # include <cstring>
+# include <csignal>
+# include <bits/stdc++.h>
 
 # include "Client.hpp"
 

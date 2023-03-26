@@ -1,5 +1,211 @@
 #include "../includes/irc.hpp"
 
+void	handle_signal(int signal)
+{
+	if (signal == SIGINT)
+	{
+		std::cout << "SIGINT received. Exiting..." << std::endl;
+		return;
+	}
+	return ;
+}
+
+std::vector<std::string>	split(std::string message, char del)
+{
+	// variable to store token obtained from the original
+    // string
+    std::string s;
+ 
+    // constructing stream from the string
+    std::stringstream ss(message);
+ 
+    // declaring vector to store the string after split
+    std::vector<std::string> v;
+ 
+    // using while loop until the getline condition is
+    // satisfied
+    // ' ' represent split the string whenever a space is
+    // found in the original string
+    while (getline(ss, s, del)) {
+ 
+        // store token string in the vector
+        v.push_back(s);
+    }
+	return (v);
+}
+
+// needs refactoring and proper handling of commands
+// used for testing with HexChat client
+int	handle_user_input(std::string message, Client *client)
+{
+	std::string command;
+	std::string params;
+	std::string response;
+
+	// check if the message is a command
+	// get the command
+	command = message.substr(0, message.find(' '));
+	std::transform(command.begin(), command.end(), command.begin(), ::tolower);
+	// get the parameters
+	std::cout << "command: " << command << std::endl;
+	params = message.substr(message.find(' ') + 1);
+	std::cout << "params: " << params << std::endl;
+	// check if the command is valid
+	if (command == "nick")
+	{
+		// check if the nickname is valid
+		if (params.find(' ') != std::string::npos)
+		{
+			response = "Error: nickname cannot contain spaces\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		client->setNickname(params);
+		client->setRegistered(true);
+		response = "Nickname set to " + params + "\r\n";
+		send(client->getSocketFd(), response.c_str(), response.size(), 0);
+		return 0;
+	}
+	else if (command == "join")
+	{
+		// check if the channel name is valid
+		if (params.find(' ') != std::string::npos)
+		{
+			response = "Error: channel name cannot contain spaces\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is registered
+		if (!client->isRegistered())
+		{
+			response = "Error: you must set a nickname before joining a channel\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is already in a channel
+		if (client->getChannel() != "")
+		{
+			response = "Error: you are already in a channel\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		client->setChannel(params);
+		response = "Joined channel " + params + "\r\n";
+		send(client->getSocketFd(), response.c_str(), response.size(), 0);
+		return 0;
+	}
+	else if (command == "part")
+	{
+		// check if the client is registered
+		if (!client->isRegistered())
+		{
+			response = "Error: you must set a nickname before leaving a channel\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is in a channel
+		if (client->getChannel() == "")
+		{
+			response = "Error: you are not in a channel\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		response = "Left channel " + client->getChannel() + "\r\n";
+		send(client->getSocketFd(), response.c_str(), response.size(), 0);
+		client->setChannel("");
+		return 0;
+	}
+	else if (command == "msg")
+	{
+		// check if the client is registered
+		if (!client->isRegistered())
+		{
+			response = "Error: you must set a nickname before sending a message\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is in a channel
+		if (client->getChannel() == "")
+		{
+			response = "Error: you are not in a channel\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the message is empty
+		if (params == "")
+		{
+			response = "Error: message cannot be empty\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		response = client->getNickname() + ": " + params + "\r\n";
+		send(client->getSocketFd(), response.c_str(), response.size(), 0);
+		return 0;
+	}
+	else if (command == "list")
+	{
+		// check if the client is registered
+		if (!client->isRegistered())
+		{
+			response = "Error: you must set a nickname before listing channels\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is in a channel
+		if (client->getChannel() == "")
+		{
+			response = "Error: you are not in a channel\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		response = "List of channels:\r\n";
+		send(client->getSocketFd(), response.c_str(), response.size(), 0);
+		return 0;
+	}
+	else if (command == "names")
+	{
+		// check if the client is registered
+		if (!client->isRegistered())
+		{
+			response = "Error: you must set a nickname before listing users\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is in a channel
+		if (client->getChannel() == "")
+		{
+			response = "Error: you are not in a channel\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		response = "List of users:\r\n";
+		send(client->getSocketFd(), response.c_str(), response.size(), 0);
+		return 0;
+	}
+	else if (command == "quit")
+	{
+		// check if the client is registered
+		if (!client->isRegistered())
+		{
+			response = "Error: you must set a nickname before quitting\r\n";
+			send(client->getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		response = "Goodbye!\r\n";
+		send(client->getSocketFd(), response.c_str(), response.size(), 0);
+		return 1;
+	}
+	else
+	{
+		response = "Error: invalid command\r\n";
+		send(client->getSocketFd(), response.c_str(), response.size(), 0);
+		return 0;
+	}
+
+
+	return 0;
+}
+
 int main (int argc, char* argv[]) {
 	if (argc != 3 ) // ./ircserv <port> <password>
 	{
@@ -21,6 +227,8 @@ int main (int argc, char* argv[]) {
 	char buffer[BUFFER_SIZE];
 	std::string message("Welcome to my IRC server!\r\n");
 	std::cout << "port is: " << portNumber << std::endl;
+
+	//signal(SIGINT, handle_signal);
 
 	// create the socket
 	//TODO: check if more error handling is needed
@@ -94,8 +302,13 @@ int main (int argc, char* argv[]) {
 				maxFd = sd;
 		}
 
+		// this needs to be handled better, it causes a leak
+		// because it doesn't free the memory allocated in the
+		// beginning of the program, the string message and the clients vector
+		// it exits abruptly after SIGINT is received
 		if (select(maxFd + 1, &readFds, NULL, NULL, NULL) < 0 && errno != EINTR)
 		{
+			std::cout << "Error: Failed to select file descriptors\n";
 			std::cerr << "Error: Failed to select file descriptors\n";
 		}
 		//If something happened on the master socket,
@@ -115,7 +328,7 @@ int main (int argc, char* argv[]) {
 					", port: " << ntohs(serverAddress.sin_port) << std::endl;
 			
 			//send new connection greeting message
-			if( send(newSocket, message.c_str(), message.size(), 0) != message.size() )
+			if( send(newSocket, "Welcome to my IRC server!\r\n", 28, 0) != 28 )
 			{
 				perror("send");
 			}
@@ -156,7 +369,6 @@ int main (int argc, char* argv[]) {
 					FD_CLR(clients[i].getSocketFd(), &readFds);
 					clients[i].setSocketFd(0);
 				}
-						
 				//Echo back the message that came in 
 				else 
 				{
@@ -166,16 +378,22 @@ int main (int argc, char* argv[]) {
 					// Handle the incoming message
 					std::string incomingMessage(buffer, valread);
 					// '\012' represents \r\n
-					if (incomingMessage.find('\012') == std::string::npos)
+					while (incomingMessage.find('\012') == std::string::npos)
 					{
 						std::cout << "\\r\\n was not found\n";
 						std::cout << "Received message in string: " << incomingMessage << std::endl;
 						std::cout << "Received message: " << buffer << std::endl;
+						valread = read( sd , buffer, 1024);
+						incomingMessage.append(buffer, valread);
 					}
-					else {
-						std::cout << "Received message in string: " << incomingMessage;
-						std::cout << "Received message: " << buffer;
+					std::cout << "Message complete. Message is: " << incomingMessage;
+					std::vector<std::string> commands = split(incomingMessage, '\012');
+					for (size_t i = 0; i < commands.size(); i++)
+					{
+						std::cout << "Command: " << commands[i] << std::endl;
+						handle_user_input(commands[i], &clients[i]);
 					}
+					
 					//send(sd , buffer , strlen(buffer) , 0 );
 				}
 			}
@@ -191,6 +409,7 @@ int main (int argc, char* argv[]) {
 		}
 	}
 	close(serverSocket);
+	clients.clear();
 
 	return (0);
 
