@@ -6,7 +6,7 @@
 /*   By: lprates <lprates@student.42lisboa.com>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/18 15:17:37 by lprates           #+#    #+#             */
-/*   Updated: 2023/03/26 03:18:59 by lprates          ###   ########.fr       */
+/*   Updated: 2023/04/01 11:21:32 by lprates          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,7 @@
 # include <bits/stdc++.h>
 
 # include "Client.hpp"
+# include "Server.hpp"
 
 # define MAX_CONNECTIONS 500
 // have to check if 1024 or 1025
@@ -41,13 +42,21 @@
 # define TRUE   1 
 # define FALSE  0 
 
-/*struct Client {
-	int socket; // client socket file descriptor
-	std::string input_buffer; // input buffer for receiving data from the client
-	std::string output_buffer; // output buffer for sending data to the client
-	bool is_registered; // connection state, true if the client is registered with a nickname
-	std::string nickname; // the client's nickname
-	// add more fields as needed...
-};*/
+typedef struct	s_server
+{
+	int					port;
+	int					socket;
+	int					fd;
+	int					addrlen;
+	struct sockaddr_in	address;
+}				t_server;
+
+// utils.cpp
+std::vector<std::string>	split(std::string message, char del);
+void	handle_signal(int signal);
+
+// input.cpp
+int	handle_user_input(std::string message, Client *client);
+int	setup_server(t_server *server, int portNumber);
 
 #endif
