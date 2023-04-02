@@ -19,6 +19,7 @@ class Server
 		int							handleClientInput(Client &client);
 		int 						handleCommands(std::string message, Client &client);
 		std::vector<std::string>	split(std::string message, char del);
+		int							handleNick(std::vector<std::string> params, Client &client);
 
 	public:
 

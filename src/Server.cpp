@@ -251,21 +251,8 @@ int Server::handleCommands(std::string message, Client &client)
 	// check if the command is valid
 	if (command == "nick")
 	{
-		// check if the nickname is valid
-		// The syntax for this command is "NICK <nickname>". For example, "NICK John"
-		if (params.size() != 1)
-		{
-			response = "Error: nickname cannot contain spaces\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return (0);
-		}
-		client.setNickname(params[0]);
-		client.setRegistered(true);
-		response = "Nickname set to " + params[0] + "\r\n";
-		//TODO: may need to protect this better
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-		return (0);
+		if (handleNick(params, client) == -1)
+			return (-1);
 	}
 	// The syntax for this command is "USER <username> <hostname> <servername> <realname>
 	// For example, "USER John localhost irc.example.com John Doe".
@@ -431,4 +418,25 @@ std::vector<std::string> Server::split(std::string message, char del)
 	while (getline(ss, s, del))
 		v.push_back(s);
 	return (v);
+}
+
+int Server::handleNick(std::vector<std::string> params, Client &client)
+{
+	std::string response;
+
+	// check if the nickname is valid
+	// The syntax for this command is "NICK <nickname>". For example, "NICK John"
+	if (params.size() != 1)
+	{
+		response = "Error: nickname cannot contain spaces\r\n";
+		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		return (0);
+	}
+	client.setNickname(params[0]);
+	client.setRegistered(true);
+	response = "Nickname set to " + params[0] + "\r\n";
+	//TODO: may need to protect this better
+	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+			std::cout << "error sending response\n";
+	return (0);
 }
