@@ -128,7 +128,7 @@ int Server::fd_reset_n_set(std::vector<Client> &clients)
 	_maxFd = this->getSocket();
 
 	//add child sockets to set 
-	for ( int i = 0 ; i < MAX_CLIENTS ; i++)
+	for (int i = 0; i < MAX_CLIENTS ; i++)
 	{
 		//socket descriptor 
 		clientFd = clients[i].getSocketFd();
@@ -238,9 +238,6 @@ int Server::handle_commands(std::string message, Client &client)
 	std::string command;
 	std::vector<std::string> params;
 	std::string response;
-	// for debugging
-	int dataSent = 0;
-	int k = 0;
 
 	// check if the message is a command
 	// get the command
@@ -260,19 +257,15 @@ int Server::handle_commands(std::string message, Client &client)
 		{
 			response = "Error: nickname cannot contain spaces\r\n";
 			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			return (0);
 		}
 		client.setNickname(params[0]);
 		client.setRegistered(true);
 		response = "Nickname set to " + params[0] + "\r\n";
-		while (dataSent < response.size() && dataSent != -1)
-		{
-			std::cout << "atempt to send number: " << k++ << " to client " << client.getSocketFd() << "\n";
-			dataSent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			if (dataSent == -1)
+		//TODO: may need to protect this better
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";
-		}
-		return 0;
+		return (0);
 	}
 	// The syntax for this command is "USER <username> <hostname> <servername> <realname>
 	// For example, "USER John localhost irc.example.com John Doe".
@@ -284,17 +277,13 @@ int Server::handle_commands(std::string message, Client &client)
 			response = "Error: invalid parameters\r\n";
 			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";
-			return 0;
+			return (0);
 		}
 		// check if the username is valid
 		response = "User set to " + params[0] + "\r\n";
-		while (dataSent < response.size() && dataSent != -1)
-		{
-			dataSent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			if (dataSent == -1)
-				std::cout << strerror(errno) << "\n";
-		}
-
+		//TODO: may need to protect this better
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
 	}
 	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
 	else if (command == "join")
@@ -304,21 +293,21 @@ int Server::handle_commands(std::string message, Client &client)
 		{
 			response = "Error: channel name cannot contain spaces\r\n";
 			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			return (0);
 		}
 		// check if the client is registered
 		if (!client.isRegistered())
 		{
 			response = "Error: you must be registered to join a channel\r\n";
 			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			return (0);
 		}
 		// check if the client is already in a channel
 		if (client.getChannel() != "")
 		{
 			response = "Error: you are already in a channel\r\n";
 			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			return (0);
 		}
 		//TODO check!
 		client.setChannel(params[0]);
@@ -327,7 +316,7 @@ int Server::handle_commands(std::string message, Client &client)
 		std::cout << response;
 		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";
-		return 0;
+		return (0);
 	}
 	else if (command == "part")
 	{
@@ -335,20 +324,26 @@ int Server::handle_commands(std::string message, Client &client)
 		if (!client.isRegistered())
 		{
 			response = "Error: you must set a nickname before leaving a channel\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			//TODO: may need to protect this better
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+			return (0);
 		}
 		// check if the client is in a channel
 		if (client.getChannel() == "")
 		{
 			response = "Error: you are not in a channel\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			//TODO: may need to protect this better
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+			return (0);
 		}
 		response = "Left channel " + client.getChannel() + "\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		//TODO: may need to protect this better
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
 		client.setChannel("");
-		return 0;
+		return (0);
 	}
 	else if (command == "msg")
 	{
@@ -356,28 +351,36 @@ int Server::handle_commands(std::string message, Client &client)
 		if (!client.isRegistered())
 		{
 			response = "Error: you must set a nickname before sending a message\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			//TODO: may need to protect this better
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+			return (0);
 		}
 		// check if the client is in a channel
 		if (client.getChannel() == "")
 		{
 			response = "Error: you are not in a channel\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			//TODO: may need to protect this better
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+			return (0);
 		}
 		// check if the message is empty
 		if (params.size() == 0)
 		{
 			response = "Error: message cannot be empty\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			//TODO: may need to protect this better
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+			return (0);
 		}
 		//TODO check message format
 		response = client.getNickname() + ": " + params[0] + "\r\n";
-		dataSent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		//TODO: may need to protect this better
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
 		
-		return 0;
+		return (0);
 	}
 	else if (command == "quit")
 	{
@@ -385,27 +388,28 @@ int Server::handle_commands(std::string message, Client &client)
 		if (!client.isRegistered())
 		{
 			response = "Error: you must set a nickname before quitting\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return 0;
+			//TODO: may need to protect this better
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+			return (0);
 		}
 		response = "Goodbye!\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		//TODO: may need to protect this better
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
 		return 1;
 	}
 	else
 	{
 		response = "Error: invalid command\r\n";
-		while (dataSent < response.size() && dataSent != -1)
-		{
-			dataSent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			if (dataSent == -1)
+		//TODO: may need to protect this better
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";
-		}
-		return 0;
+		return (0);
 	}
 
 
-	return 0;
+	return (0);
 }
 
 std::vector<std::string> Server::split(std::string message, char del)
