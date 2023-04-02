@@ -70,7 +70,7 @@ int Server::setup_server(int port)
 
 int Server::run(std::vector<Client> &clients)
 {
-	fd_reset_n_set(clients);
+	fdResetNSet(clients);
 
 	std::cout << "Waiting for new connections...\n";
 	if (select(_maxFd + 1, &_readFds, NULL, NULL, NULL) < 0 && errno == EINTR)
@@ -82,7 +82,7 @@ int Server::run(std::vector<Client> &clients)
 	//If something happened on the master socket,
 	//then its an incoming connection
 	if (FD_ISSET(this->getSocket(), &_readFds))
-		handle_new_connection(clients);
+		handleNewConnection(clients);
 
 	//else it's some IO operation on some other socket
 	for (int i = 0; i < MAX_CLIENTS; i++)
@@ -91,7 +91,7 @@ int Server::run(std::vector<Client> &clients)
 		{
 			//Check if it was for closing, and also read the
 			//incoming message
-			if (handle_client_input(clients[i]) == 0)
+			if (handleClientInput(clients[i]) == 0)
 			{
 				//Echo back the message that came in
 				std::cout << "Handled client input with successs\n";
@@ -117,7 +117,7 @@ int Server::clear_fd_set()
 }
 
 
-int Server::fd_reset_n_set(std::vector<Client> &clients)
+int Server::fdResetNSet(std::vector<Client> &clients)
 {
 	int	clientFd;
 
@@ -144,7 +144,7 @@ int Server::fd_reset_n_set(std::vector<Client> &clients)
 	return (0);
 }
 
-int Server::handle_new_connection(std::vector<Client> &clients)
+int Server::handleNewConnection(std::vector<Client> &clients)
 {
 	t_socket tmpSocket;
 	tmpSocket.addrlen = sizeof(tmpSocket.address);
@@ -184,7 +184,7 @@ int Server::handle_new_connection(std::vector<Client> &clients)
 	return (0);
 }
 
-int Server::handle_client_input(Client &client)
+int Server::handleClientInput(Client &client)
 {
 	int valread;
 	char buffer[BUFFER_SIZE];
@@ -217,7 +217,7 @@ int Server::handle_client_input(Client &client)
 			for (size_t k = 0; k < commands.size(); k++)
 			{
 				std::cout << "Command: " << commands[k] << std::endl;
-				handle_commands(commands[k], client);
+				handleCommands(commands[k], client);
 			}
 			client.getOutputBuffer().clear();
 		}
@@ -233,7 +233,7 @@ int Server::handle_client_input(Client &client)
 
 // needs refactoring and proper handling of commands
 // used for testing with HexChat client
-int Server::handle_commands(std::string message, Client &client)
+int Server::handleCommands(std::string message, Client &client)
 {
 	std::string command;
 	std::vector<std::string> params;

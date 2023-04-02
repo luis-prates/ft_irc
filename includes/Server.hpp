@@ -14,10 +14,10 @@ class Server
 		fd_set				_readFds;
 		struct sockaddr_in	_address;
 
-		int							fd_reset_n_set(std::vector<Client> &clients);
-		int							handle_new_connection(std::vector<Client> &clients);
-		int							handle_client_input(Client &client);
-		int 						handle_commands(std::string message, Client &client);
+		int							fdResetNSet(std::vector<Client> &clients);
+		int							handleNewConnection(std::vector<Client> &clients);
+		int							handleClientInput(Client &client);
+		int 						handleCommands(std::string message, Client &client);
 		std::vector<std::string>	split(std::string message, char del);
 
 	public:

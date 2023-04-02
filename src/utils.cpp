@@ -24,7 +24,7 @@
 	return (v);
 } */
 
-void	handle_signal(int signal)
+void	handleSignal(int signal)
 {
 	if (signal == SIGINT)
 	{

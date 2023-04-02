@@ -24,7 +24,7 @@ int main (int argc, char* argv[]) {
 	int valread;
 	char buffer[BUFFER_SIZE];
 
-	signal(SIGINT, handle_signal);
+	signal(SIGINT, handleSignal);
 
 	// Create an array of client objects to store information about each connected client
 	std::vector<Client> clients(MAX_CLIENTS, Client(0)); // initialize all elements with an invalid socket fd
