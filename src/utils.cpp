@@ -1,6 +1,6 @@
 #include "../includes/irc.hpp"
 
-std::vector<std::string>	split(std::string message, char del)
+/* std::vector<std::string>	split(std::string message, char del)
 {
 	// variable to store token obtained from the original
     // string
@@ -22,7 +22,7 @@ std::vector<std::string>	split(std::string message, char del)
         v.push_back(s);
     }
 	return (v);
-}
+} */
 
 void	handle_signal(int signal)
 {
@@ -32,5 +32,4 @@ void	handle_signal(int signal)
 		return;
 	}
 	return ;
-	//stop = true;
 }

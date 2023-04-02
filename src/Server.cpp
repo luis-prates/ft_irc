@@ -147,10 +147,11 @@ int Server::fd_reset_n_set(std::vector<Client> &clients)
 int Server::handle_new_connection(std::vector<Client> &clients)
 {
 	t_socket tmpSocket;
-	std::string message("Welcome to my IRC server!\r\n");
+	tmpSocket.addrlen = sizeof(tmpSocket.address);
+	std::string message(WELCOME);
 
 	if ((tmpSocket.socket = accept(this->getSocket(),
-			(struct sockaddr *)&tmpSocket.address, (socklen_t*)&tmpSocket.addrlen)) < 0 && errno == EINTR)
+			(struct sockaddr *)&tmpSocket.address, (socklen_t*)&tmpSocket.addrlen)) < 0 /*&& errno == EINTR*/)
 	{
 		perror("accept");
 		throw ServerException();
@@ -167,9 +168,7 @@ int Server::handle_new_connection(std::vector<Client> &clients)
 		perror("send");
 		throw ServerException();
 	}
-			
-	puts("Welcome message sent successfully");
-			
+
 	//add new socket to array of sockets
 	for (int i = 0; i < MAX_CLIENTS; i++)
 	{
@@ -179,7 +178,6 @@ int Server::handle_new_connection(std::vector<Client> &clients)
 			clients[i].setSocketFd(tmpSocket.socket);
 			clients[i].setIpAddress(inet_ntoa(tmpSocket.address.sin_addr));
 			clients[i].setPort(ntohs(tmpSocket.address.sin_port));
-			std::cout << "Adding to list of sockets as " << i << std::endl;
 			break;
 		}
 	}
@@ -212,23 +210,222 @@ int Server::handle_client_input(Client &client)
 		// Handle the incoming message
 		client.getOutputBuffer().append(buffer, valread);
 		// '\012' represents \r\n
-		if (client.getOutputBuffer().find('\012') == std::string::npos)
-		{
-			std::cout << "\\r\\n was not found\n";
-			std::cout << "Received message: " << buffer << std::endl;
-			std::cout << "Output buffer: " << client.getOutputBuffer() << std::endl;
-		}
-		else
+		if (client.getOutputBuffer().find('\012') != std::string::npos)
 		{
 			std::cout << "Message complete. Message is: " << client.getOutputBuffer() << std::endl;
 			std::vector<std::string> commands = split(client.getOutputBuffer(), '\012');
 			for (size_t k = 0; k < commands.size(); k++)
 			{
 				std::cout << "Command: " << commands[k] << std::endl;
-				handle_user_input(commands[k], &client);
+				handle_commands(commands[k], client);
 			}
 			client.getOutputBuffer().clear();
 		}
+		else
+		{
+			std::cout << "\\r\\n was not found\n";
+			std::cout << "Received message: " << buffer << std::endl;
+			std::cout << "Output buffer: " << client.getOutputBuffer() << std::endl;
+		}
 	}
 	return (0);
+}
+
+// needs refactoring and proper handling of commands
+// used for testing with HexChat client
+int Server::handle_commands(std::string message, Client &client)
+{
+	std::string command;
+	//TODO: is a vector the best way to store the parameters?
+	std::vector<std::string> params;
+	std::string response;
+	// for debugging
+	int dataSent = 0;
+	int k = 0;
+
+	// check if the message is a command
+	// get the command
+	command = message.substr(0, message.find(' '));
+	std::transform(command.begin(), command.end(), command.begin(), ::tolower);
+	// get the parameters
+	std::cout << "command: " << command << std::endl;
+	params = split(message.substr(message.find(' ') + 1), ' ');
+	for (size_t i = 0; i < params.size(); i++)
+		std::cout << "param: " << params[i] << std::endl;
+	// check if the command is valid
+	if (command == "nick")
+	{
+		// check if the nickname is valid
+		// The syntax for this command is "NICK <nickname>". For example, "NICK John"
+		if (params.size() != 1)
+		{
+			response = "Error: nickname cannot contain spaces\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		client.setNickname(params[0]);
+		client.setRegistered(true);
+		response = "Nickname set to " + params[0] + "\r\n";
+		while (dataSent < response.size() && dataSent != -1)
+		{
+			std::cout << "atempt to send number: " << k++ << " to client " << client.getSocketFd() << "\n";
+			dataSent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			if (dataSent == -1)
+				std::cout << "error sending response\n";
+		}
+		return 0;
+	}
+	// The syntax for this command is "USER <username> <hostname> <servername> <realname>
+	// For example, "USER John localhost irc.example.com John Doe".
+	else if (command == "user")
+	{
+		if (params.size() < 4)
+		{
+			std::cout << "user commands params are invalid\n";
+			response = "Error: invalid parameters\r\n";
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+			return 0;
+		}
+		// check if the username is valid
+		response = "User set to " + params[0] + "\r\n";
+		while (dataSent < response.size() && dataSent != -1)
+		{
+			dataSent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			if (dataSent == -1)
+				std::cout << strerror(errno) << "\n";
+		}
+
+	}
+	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
+	else if (command == "join")
+	{
+		// check if the channel name is valid
+		if (params.size() != 1)
+		{
+			response = "Error: channel name cannot contain spaces\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is registered
+		if (!client.isRegistered())
+		{
+			response = "Error: you must be registered to join a channel\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is already in a channel
+		if (client.getChannel() != "")
+		{
+			response = "Error: you are already in a channel\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		//TODO check!
+		client.setChannel(params[0]);
+		//TODO check!
+		response = "Joined channel " + params[0] + "\r\n";
+		std::cout << response;
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+		return 0;
+	}
+	else if (command == "part")
+	{
+		// check if the client is registered
+		if (!client.isRegistered())
+		{
+			response = "Error: you must set a nickname before leaving a channel\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is in a channel
+		if (client.getChannel() == "")
+		{
+			response = "Error: you are not in a channel\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		response = "Left channel " + client.getChannel() + "\r\n";
+		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		client.setChannel("");
+		return 0;
+	}
+	else if (command == "msg")
+	{
+		// check if the client is registered
+		if (!client.isRegistered())
+		{
+			response = "Error: you must set a nickname before sending a message\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the client is in a channel
+		if (client.getChannel() == "")
+		{
+			response = "Error: you are not in a channel\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		// check if the message is empty
+		if (params.size() == 0)
+		{
+			response = "Error: message cannot be empty\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		//TODO check message format
+		response = client.getNickname() + ": " + params[0] + "\r\n";
+		dataSent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		
+		return 0;
+	}
+	else if (command == "quit")
+	{
+		// check if the client is registered
+		if (!client.isRegistered())
+		{
+			response = "Error: you must set a nickname before quitting\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return 0;
+		}
+		response = "Goodbye!\r\n";
+		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		return 1;
+	}
+	else
+	{
+		response = "Error: invalid command\r\n";
+		while (dataSent < response.size() && dataSent != -1)
+		{
+			dataSent = send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			if (dataSent == -1)
+				std::cout << "error sending response\n";
+		}
+		return 0;
+	}
+
+
+	return 0;
+}
+
+std::vector<std::string> Server::split(std::string message, char del)
+{
+	// variable to store token obtained from the original
+	// string
+	std::string s;
+
+	// constructing stream from the string
+	std::stringstream ss(message);
+
+	// declaring vector to store the string after split
+	std::vector<std::string> v;
+
+	// using while loop until the getline condition is
+	// satisfied
+	// ' ' represent split the string whenever a space is
+	// found in the original string
+	while (getline(ss, s, del))
+		v.push_back(s);
+	return (v);
 }

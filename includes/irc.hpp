@@ -6,7 +6,7 @@
 /*   By: lprates <lprates@student.42lisboa.com>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/18 15:17:37 by lprates           #+#    #+#             */
-/*   Updated: 2023/04/02 14:44:40 by lprates          ###   ########.fr       */
+/*   Updated: 2023/04/02 16:38:16 by lprates          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,9 @@
 # define BUFFER_SIZE 1025
 # define MAX_CLIENTS 100
 # define TRUE   1 
-# define FALSE  0 
+# define FALSE  0
+
+# define WELCOME "Welcome to our IRC channel, where the chat is always on fire and the puns are #IRCredible!\r\n"
 
 typedef struct	s_socket
 {
@@ -53,10 +55,8 @@ typedef struct	s_socket
 }				t_socket;
 
 // utils.cpp
-std::vector<std::string>	split(std::string message, char del);
 void	handle_signal(int signal);
 
 // input.cpp
-int	handle_user_input(std::string message, Client *client);
 
 #endif
