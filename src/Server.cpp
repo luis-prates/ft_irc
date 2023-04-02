@@ -236,7 +236,6 @@ int Server::handle_client_input(Client &client)
 int Server::handle_commands(std::string message, Client &client)
 {
 	std::string command;
-	//TODO: is a vector the best way to store the parameters?
 	std::vector<std::string> params;
 	std::string response;
 	// for debugging
