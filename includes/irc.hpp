@@ -6,7 +6,7 @@
 /*   By: lprates <lprates@student.42lisboa.com>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/18 15:17:37 by lprates           #+#    #+#             */
-/*   Updated: 2023/04/01 11:21:32 by lprates          ###   ########.fr       */
+/*   Updated: 2023/04/02 14:44:40 by lprates          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@
 # include <cstring>
 # include <csignal>
 # include <bits/stdc++.h>
+# include <netdb.h>
 
 # include "Client.hpp"
 # include "Server.hpp"
@@ -42,14 +43,14 @@
 # define TRUE   1 
 # define FALSE  0 
 
-typedef struct	s_server
+typedef struct	s_socket
 {
 	int					port;
 	int					socket;
 	int					fd;
 	int					addrlen;
 	struct sockaddr_in	address;
-}				t_server;
+}				t_socket;
 
 // utils.cpp
 std::vector<std::string>	split(std::string message, char del);
@@ -57,6 +58,5 @@ void	handle_signal(int signal);
 
 // input.cpp
 int	handle_user_input(std::string message, Client *client);
-int	setup_server(t_server *server, int portNumber);
 
 #endif

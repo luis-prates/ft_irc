@@ -10,7 +10,13 @@ class Server
 		int					_socket;
 		int					_fd;
 		int					_addrlen;
+		int					_maxFd;
+		fd_set				_readFds;
 		struct sockaddr_in	_address;
+
+		int					fd_reset_n_set(std::vector<Client> &clients);
+		int					handle_new_connection(std::vector<Client> &clients);
+		int					handle_client_input(Client &client);
 
 	public:
 
@@ -31,6 +37,8 @@ class Server
 		void				setAddress(struct sockaddr_in address) { _address = address; }
 
 		int					setup_server(int port);
+		int					run(std::vector<Client> &clients);
+		int					clear_fd_set();
 
 		class ServerException : public std::exception
 		{

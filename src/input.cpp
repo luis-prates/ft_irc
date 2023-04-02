@@ -35,7 +35,6 @@ int	handle_user_input(std::string message, Client *client)
 		client->setNickname(params[0]);
 		client->setRegistered(true);
 		response = "Nickname set to " + params[0] + "\r\n";
-		std::cout << response;
 		while (dataSent < response.size() && dataSent != -1)
 		{
 			std::cout << "atempt to send number: " << k++ << " to client " << client->getSocketFd() << "\n";
@@ -58,11 +57,9 @@ int	handle_user_input(std::string message, Client *client)
 			return 0;
 		}
 		// check if the username is valid
-		std::cout << "user commands params are valid\n";
 		response = "User set to " + params[0] + "\r\n";
 		while (dataSent < response.size() && dataSent != -1)
 		{
-			std::cout << "atempt to send number: " << k++ << " to client " << client->getSocketFd() << "\n";
 			dataSent = send(client->getSocketFd(), response.c_str(), response.size(), 0);
 			if (dataSent == -1)
 				std::cout << strerror(errno) << "\n";
@@ -168,10 +165,8 @@ int	handle_user_input(std::string message, Client *client)
 	else
 	{
 		response = "Error: invalid command\r\n";
-		std::cout << command << std::endl;
 		while (dataSent < response.size() && dataSent != -1)
 		{
-			std::cout << "atempt to send number: " << k++ << "\n";
 			dataSent = send(client->getSocketFd(), response.c_str(), response.size(), 0);
 			if (dataSent == -1)
 				std::cout << "error sending response\n";
