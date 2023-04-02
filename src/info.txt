@@ -165,3 +165,67 @@ ntohs() - network to host short
 ntohl() - network to host long
 
 implement local and global operators. Implement command to turn user into operator
+
+Step by step:
+
+Define the necessary data structures for managing client connections, channels, and user information, such as a struct or class to represent each client's socket file descriptor, nickname, username, and current channel. You may also need a data structure to store channel information, such as the channel name, a list of clients who joined the channel, and the channel operator(s).
+
+Create a main function that parses the command-line arguments for the port number and password, initializes the server socket using the socket() function, binds it to the specified port using the bind() function, and starts listening for incoming connections using the listen() function. You should also set the server socket to non-blocking mode using fcntl() or another equivalent function.
+
+Create a loop that accepts incoming connections using the accept() function and adds each new client to the list of connected clients. For each new client, create a new socket file descriptor using the socket() function, set it to non-blocking mode using fcntl(), and add it to the poll() (or equivalent) event list for reading.
+
+When the poll() (or equivalent) function returns, check each socket file descriptor in the event list for new data to read or write. For each client socket with new data to read, use the recv() function to read the data into a buffer, parse the incoming message, and handle it accordingly. For example, if the message starts with "/join", add the client to the specified channel's list of clients, and send a message to all clients in the channel to inform them of the new client's presence.
+
+For each client socket with pending data to write, use the send() function to send the data to the client. You may need to split long messages into smaller chunks to avoid sending too much data at once.
+
+Handle disconnections by removing the client's socket file descriptor from the poll() (or equivalent) event list and closing the socket using the close() function. Also, remove the client from any channel they were in and inform the remaining clients in the channel.
+
+Implement the necessary commands for authenticating, setting a nickname, a username, joining a channel, sending and receiving private messages, distinguishing between operators and regular users, and handling operator-specific commands. For example, you may need to add a password check before allowing clients to connect, and you may need to assign a unique nickname to each client to avoid conflicts.
+
+Test your server using a reference client or a custom client program to verify that it can handle multiple clients, forward messages to the correct channels and clients, and distinguish between operators and regular users.
+
+Refactor and optimize your code as necessary to improve performance, readability, and maintainability. You may want to use helper functions or classes to abstract common operations and reduce code duplication, or use more advanced data structures or algorithms to handle large numbers of clients or channels.
+
+This is just a rough outline of the steps involved in implementing an IRC server in C++ 98. Depending on your specific requirements and constraints, you may need to adjust some of the details or add additional features or optimizations.
+
+----------------------------------------------------------------------------------------------------
+Channel Scope
+
+Channels names are strings (beginning with a '&', '#', '+' or '!' character) of length up to fifty (50) characters. Channel names are case insensitive.
+
+Apart from the the requirement that the first character being either '&', '#', '+' or '!' (hereafter called "channel prefix"). The only restriction on a channel name is that it SHALL NOT contain any spaces (' '), a control G (^G or ASCII 7), a comma (',' which is used as a list item separator by the protocol).  Also, a colon (':') is used as a delimiter for the channel mask.  The exact syntax of a channel name is defined in "IRC Server Protocol" [IRC-SERVER].
+
+The use of different prefixes effectively creates four (4) distinct namespaces for channel names.  This is important because of the protocol limitations regarding namespaces (in general).  See section6.1 (Labels) for more details on these limitations.
+
+Channels with '&' as prefix are local to the server where they are created.
+
+Channel Properties
+
+Each channel has its own properties, which are defined by channel modes.  Channel modes can be manipulated by the channel members. The modes affect the way servers manage the channels.
+Channels with '+' as prefix do not support channel modes. This means that all the modes are unset, with the exception of the 't' channel flag which is set.
+
+Privileged Channel Members
+
+In order for the channel members to keep some control over a channel, and some kind of sanity, some channel members are privileged.  Only these members are allowed to perform the following actions on the channel:
+
+    INVITE  - Invite a client to an invite-only channel (mode +i)
+    KICK    - Eject a client from the channel
+    MODE    - Change the channel's mode, as well as members' privileges
+    PRIVMSG - Sending messages to the channel (mode +n, +m, +v)
+    TOPIC   - Change the channel topic in a mode +t channel
+
+Channel Operators
+
+The channel operators (also referred to as a "chop" or "chanop") on a given channel are considered to 'own' that channel.  Ownership of a channel is shared among channel operators.
+
+Channel operators are identified by the '@' symbol next to their nickname whenever it is associated with a channel (i.e., replies to the NAMES, WHO and WHOIS commands).
+
+Since channels starting with the character '+' as prefix do not support channel modes, no member can therefore have the status of channel operator.
+
+Channel Creator
+
+A user who creates a channel with the character '!' as prefix is identified as the "channel creator".  Upon creation of the channel, this user is also given channel operator status.
+
+In recognition of this status, the channel creators are endowed with the ability to toggle certain modes of the channel which channel operators may not manipulate.
+
+A "channel creator" can be distinguished from a channel operator by issuing the proper MODE command.  See the "IRC Client Protocol" [IRC-CLIENT] for more information on this topic.
