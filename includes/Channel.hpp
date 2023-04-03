@@ -9,21 +9,21 @@ class Channel
 {
 private:
 	std::string	_name;
-	std::vector<Client*> clients;
-	std::vector<Client*> operators;
+	std::vector<Client*> _clients;
+	std::vector<Client*> _operators;
+	std::string _topic;
 	
 public:
-	Channel(/* args */);
-	~Channel();
+	explicit Channel(std::string name, Client client, Client op, std::string topic):
+	_name(name),
+	_topic(topic)
+	{
+		_clients.push_back(&client);
+		_operators.push_back(&op);
+	}
+
+	~Channel(){};
 };
-
-Channel::Channel(/* args */)
-{
-}
-
-Channel::~Channel()
-{
-}
 
 
 #endif
