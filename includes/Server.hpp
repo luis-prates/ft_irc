@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+# include "../includes/Channel.hpp"
 # include "irc.hpp"
 
 class Server
@@ -13,6 +14,8 @@ class Server
 		int					_maxFd;
 		fd_set				_readFds;
 		struct sockaddr_in	_address;
+
+		std::vector<Channel>	_channels;
 
 		int							fdResetNSet(std::vector<Client> &clients);
 		int							handleNewConnection(std::vector<Client> &clients);

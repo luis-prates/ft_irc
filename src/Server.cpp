@@ -1,4 +1,5 @@
 #include "../includes/Server.hpp"
+#include "../includes/Channel.hpp"
 
 Server::Server()
 {
@@ -299,7 +300,15 @@ int Server::handleCommands(std::string message, Client &client)
 		//TODO check!
 		client.setChannel(params[0]);
 		//TODO check!
-		response = "Joined channel " + params[0] + "\r\n";
+
+		// create a channel object and add it to the list of channels
+		std::string channelName = params[0];
+		if (params[0][0] == '#') {
+			Channel channel(channelName, client);
+			_channels.push_back(channel);
+		}
+		// response = "Joined channel " + params[0] + "\r\n";
+		response = ":server-name 332 " + client.getNickname() + " #" + channelName + " :channelTopic\r\n";
 		std::cout << response;
 		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";

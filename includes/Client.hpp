@@ -1,6 +1,7 @@
 #ifndef CLASS_HPP
 # define CLASS_HPP
 
+# include <cstdlib>
 # include <string>
 
 class Client
@@ -28,16 +29,18 @@ class Client
 		void				setPort(u_int16_t port) { _port = port; }
 
 	private:
-		int			_socketFd;
+		int					_socketFd;
 		std::string	_inputBuffer;
 		std::string	_outputBuffer;
-		bool		_isRegistered;
+		bool				_isRegistered;
 		std::string	_nickname;
 		std::string	_username;
 		std::string	_channel;
 		bool		_isOperator;
 		char		*_ipAddress;
 		u_int16_t	_port;
+
+		std::vector<std::string>	_channels;
 };
 
 #endif
