@@ -28,6 +28,8 @@ class Client
 		u_int16_t			getPort() const { return (_port); }
 		void				setPort(u_int16_t port) { _port = port; }
 
+		std::vector<std::string>	_channels;
+
 	private:
 		int					_socketFd;
 		std::string	_inputBuffer;
@@ -40,7 +42,6 @@ class Client
 		char		*_ipAddress;
 		u_int16_t	_port;
 
-		std::vector<std::string>	_channels;
 };
 
 #endif

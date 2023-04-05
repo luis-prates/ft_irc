@@ -15,7 +15,7 @@ class Server
 		fd_set				_readFds;
 		struct sockaddr_in	_address;
 
-		std::vector<Channel>	_channels;
+		std::vector<std::string>	_channels;
 
 		int							fdResetNSet(std::vector<Client> &clients);
 		int							handleNewConnection(std::vector<Client> &clients);
@@ -23,6 +23,8 @@ class Server
 		int 						handleCommands(std::string message, Client &client);
 		std::vector<std::string>	split(std::string message, char del);
 		int							handleNick(std::vector<std::string> params, Client &client);
+		int							handleUser(std::vector<std::string> params, Client &client);
+		int							joinChannel(std::vector<std::string> params, Client &client, std::string &response);
 
 	public:
 

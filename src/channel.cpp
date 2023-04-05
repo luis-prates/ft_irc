@@ -32,5 +32,5 @@
 	}
 
 	/* REFERENCES:
-	 * https://se.inf.ethz.ch/student_projecs/fabian_gremper/Report.pdf
+	 * https://se.inf.ethz.ch/student_projects/fabian_gremper/Report.pdf
 	 */

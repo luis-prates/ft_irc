@@ -1,5 +1,6 @@
 #include "../includes/Server.hpp"
 #include "../includes/Channel.hpp"
+#include "../headers/Macros.hpp"
 
 Server::Server()
 {
@@ -276,43 +277,7 @@ int Server::handleCommands(std::string message, Client &client)
 	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
 	else if (command == "join")
 	{
-		// check if the channel name is valid
-		if (params.size() != 1)
-		{
-			response = "Error: channel name cannot contain spaces\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return (0);
-		}
-		// check if the client is registered
-		if (!client.isRegistered())
-		{
-			response = "Error: you must be registered to join a channel\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return (0);
-		}
-		// check if the client is already in a channel
-		if (client.getChannel() != "")
-		{
-			response = "Error: you are already in a channel\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return (0);
-		}
-		//TODO check!
-		client.setChannel(params[0]);
-		//TODO check!
-
-		// create a channel object and add it to the list of channels
-		std::string channelName = params[0];
-		if (params[0][0] == '#') {
-			Channel channel(channelName, client);
-			_channels.push_back(channel);
-		}
-		// response = "Joined channel " + params[0] + "\r\n";
-		response = ":server-name 332 " + client.getNickname() + " #" + channelName + " :channelTopic\r\n";
-		std::cout << response;
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-		return (0);
+		return (joinChannel(params, client, response));
 	}
 	else if (command == "part")
 	{
@@ -448,4 +413,66 @@ int Server::handleNick(std::vector<std::string> params, Client &client)
 	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 			std::cout << "error sending response\n";
 	return (0);
+}
+
+int Server::joinChannel( std::vector<std::string> params, Client &client, std::string &response) {
+/** @checks:
+ * User must be invited if the channel is +i;
+ * The user's nick/username/hostname must not match any active bans;
+ * The correct password must be given if the channel is +k;
+ * 
+ * @reply:
+ * Receive notice about all commands their server receives that affect the channel:
+ * -	MODE	-	KICK	-	PART	-	QUIT	-	PRIVMSG	-	NOTICE
+ * 
+ * If a JOIN is successful, the user is then sent the channel's topic (using RPL_TOPIC)
+ * and the list of users who are on the channel (using RPL_NAMREPLY),
+ * which MUST include the user joining.
+ * 
+ */	
+		// check if the channel name is valid
+
+		if (params.size() != 1)
+		{
+			response = "Error: channel name cannot contain spaces\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return (0);
+		}
+		// check if the client is registered
+		if (!client.isRegistered())
+		{
+			response = "Error: you must be registered to join a channel\r\n";
+			send(client.getSocketFd(), response.c_str(), response.size(), 0);
+			return (0);
+		}
+
+		client.setChannel(params[0]);
+		// create a channel object and add it to the list of channels
+		std::string channelName = params[0];
+		
+		// check if the client already exists
+		for(std::vector<std::string>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+			if (*it == params[0])
+			{
+				Channel newChannel(channelName, client);
+				if (params[0][0] == '#' || params[0][0] == '&')
+					_channels.push_back(newChannel._name);
+				else {
+					newChannel.joinChannel(client);
+					response = client.getNickname() + " JOIN " + params[0] + "\r\n";
+					// Send to all clients in the channel
+	
+
+
+				}
+			}
+		}
+
+		// Response to the client to confirm the join
+		response = ":" + client.getNickname() + " JOIN " + params[0] + "\r\n";
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+		// RPL_TOPIC
+		// RPL_NAMREPLY
+		return (0);
 }
