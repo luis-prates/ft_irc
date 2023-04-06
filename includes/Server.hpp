@@ -6,16 +6,19 @@
 
 class Server
 {
+	public:
+		std::vector<Channel> _channels;
+
 	private:
 		int					_port;
 		int					_socket;
 		int					_fd;
 		int					_addrlen;
 		int					_maxFd;
-		fd_set				_readFds;
+		fd_set							_readFds;
 		struct sockaddr_in	_address;
 
-		std::vector<std::string>	_channels;
+		std::vector<Client>		_clients;
 
 		int							fdResetNSet(std::vector<Client> &clients);
 		int							handleNewConnection(std::vector<Client> &clients);
@@ -25,6 +28,10 @@ class Server
 		int							handleNick(std::vector<std::string> params, Client &client);
 		int							handleUser(std::vector<std::string> params, Client &client);
 		int							joinChannel(std::vector<std::string> params, Client &client, std::string &response);
+
+		Channel*				getChannel(std::string channelName);
+		void 						handleChannelCommunication(Client client, Channel newChannel, std::string response);
+
 
 	public:
 

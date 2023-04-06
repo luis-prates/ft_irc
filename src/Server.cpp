@@ -303,7 +303,7 @@ int Server::handleCommands(std::string message, Client &client)
 		//TODO: may need to protect this better
 		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";
-		client.setChannel("");
+		client.addChannel("");
 		return (0);
 	}
 	else if (command == "msg")
@@ -432,47 +432,78 @@ int Server::joinChannel( std::vector<std::string> params, Client &client, std::s
  */	
 		// check if the channel name is valid
 
-		if (params.size() != 1)
-		{
-			response = "Error: channel name cannot contain spaces\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return (0);
-		}
-		// check if the client is registered
-		if (!client.isRegistered())
-		{
-			response = "Error: you must be registered to join a channel\r\n";
-			send(client.getSocketFd(), response.c_str(), response.size(), 0);
-			return (0);
-		}
+	if (params.size() != 1)
+	{
+		response = "Error: channel name cannot contain spaces\r\n";
+		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		return (0);
+	}
 
-		client.setChannel(params[0]);
-		// create a channel object and add it to the list of channels
-		std::string channelName = params[0];
-		
-		// check if the client already exists
-		for(std::vector<std::string>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
-			if (*it == params[0])
-			{
-				Channel newChannel(channelName, client);
-				if (params[0][0] == '#' || params[0][0] == '&')
-					_channels.push_back(newChannel._name);
-				else {
-					newChannel.joinChannel(client);
-					response = client.getNickname() + " JOIN " + params[0] + "\r\n";
-					// Send to all clients in the channel
-	
+	// check if the client is registered
+	if (!client.isRegistered())
+	{
+		response = "Error: you must be registered to join a channel\r\n";
+		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		return (0);
+	}
 
+	// create a channel object and add it to the list of channels
+	std::string channelName = params[0];
 
-				}
+	// if channel name is valid:
+	if (params[0][0] == '#') {
+
+		// check if the channel already exists
+		std::vector<Channel>::iterator it;
+		for(it = Server::_channels.begin(); it != Server::_channels.end(); ++it) {
+			if (it->_name == channelName)	{
+				it->addClient(client);
+				client.addChannel(channelName);
+				break;
 			}
 		}
-
-		// Response to the client to confirm the join
-		response = ":" + client.getNickname() + " JOIN " + params[0] + "\r\n";
+		if (it == Server::_channels.end()) {
+			
+			// Create a new Channel, add it to the list of channels and add the client to the channel
+			Channel newChannel(channelName, client);
+			Server::_channels.push_back(newChannel);
+			newChannel.joinChannel(client); // define the client and operator
+			client.addChannel(channelName);
+		}
+	}
+	else  {
+		response = channelName + ":No such channel\r\n";
 		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-		// RPL_TOPIC
-		// RPL_NAMREPLY
-		return (0);
+			std::cout << "error sending response\n";
+		
+	}
+	handleChannelCommunication(client, *Server::getChannel(channelName), response);
+	return (0);
+}
+
+void Server::handleChannelCommunication(Client client, Channel newChannel, std::string response) {
+	// Reply to the client to confirm the join
+	response = ":" + client.getNickname() + " JOIN " + newChannel.getName() + "\r\n";
+	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+	std::cout << "error sending response\n";
+
+	// RPL_TOPIC
+	if (newChannel.getTopic() != "")
+		response = newChannel.getName() + " :" + newChannel.getTopic() + "\r\n";
+	else
+		response = newChannel.getName() + " :No topic is set\r\n";
+	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+		std::cout << "error sending response\n";
+
+	// RPL_NAMREPLY
+}
+
+
+Channel* Server::getChannel(std::string channelName) {
+	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+		if (it->_name == channelName)	{
+			return &(*it);
+		}
+	}
+	return 0;
 }
