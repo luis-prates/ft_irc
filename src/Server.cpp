@@ -276,9 +276,11 @@ int Server::handleCommands(std::string message, Client &client)
 	}
 	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
 	else if (command == "join")
-	{
 		return (joinChannel(params, client, response));
-	}
+	else if (command == "who")
+		who(params, client, response);
+	else if (command == "privmsg")
+		privmsg(params, client, response);
 	else if (command == "part")
 	{
 		// check if the client is registered
@@ -485,7 +487,7 @@ void Server::handleChannelCommunication(Client client, Channel newChannel, std::
 	// Reply to the client to confirm the join
 	response = ":" + client.getNickname() + " JOIN " + newChannel.getName() + "\r\n";
 	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-	std::cout << "error sending response\n";
+		std::cout << "error sending response\n";
 
 	// RPL_TOPIC
 	if (newChannel.getTopic() != "")
@@ -498,7 +500,6 @@ void Server::handleChannelCommunication(Client client, Channel newChannel, std::
 	// RPL_NAMREPLY
 }
 
-
 Channel* Server::getChannel(std::string channelName) {
 	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
 		if (it->_name == channelName)	{
@@ -506,4 +507,38 @@ Channel* Server::getChannel(std::string channelName) {
 		}
 	}
 	return 0;
+}
+
+// Not working as expected... though that if I gave the correct reply the hexchat would list my user in the channel
+//in the right side bar... but it doesn't
+void Server::who(std::vector<std::string> params, Client client, std::string response) {
+	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+		if (it->_name == params[0])	{
+			for (std::vector<Client>::iterator it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
+				response = ":" + it->getName() + " 352 " + it2->getNickname() + "!" + it2->getUsername() + "@" + " " + it2->getNickname() + " " + it2->getUsername() + " " + it2->getNickname() + " H :0 ";
+				response.append(":End of WHO list.\r\n");
+			}
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+		}
+	}
+	std::cout << response << std::endl;
+}
+
+void Server::privmsg(std::vector<std::string> params, Client client, std::string response) {
+	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+		std::cout << "channel name: " <<	it->getName() << " param: " << params[0] << std::endl;
+		if (it->_name == params[0])	{
+			for (std::vector<Client>::iterator it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
+				std::cout << "user name: " <<	it2->getUsername() << std::endl;
+				for (std::vector<std::string>::iterator it3 = params.begin(); it3 != params.end(); ++it3) {
+					response.append(*it3);
+					response.append(" ");
+				}
+				response.append("\r\n");
+				if (send(it2->getSocketFd(), response.c_str(), response.size(), 0) == -1)
+					std::cout << "error sending response\n";
+			}
+		}
+	}
 }
