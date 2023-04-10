@@ -278,7 +278,7 @@ int Server::handleCommands(std::string message, Client &client)
 	else if (command == "join")
 		return (joinChannel(params, client, response));
 	else if (command == "who")
-		who(params, client, response);
+		who(params, client);
 	else if (command == "privmsg")
 		privmsg(params, client, response);
 	else if (command == "part")
@@ -509,20 +509,32 @@ Channel* Server::getChannel(std::string channelName) {
 	return 0;
 }
 
-// Not working as expected... though that if I gave the correct reply the hexchat would list my user in the channel
+// Not working as expected... thought that if I gave the correct reply the hexchat would list my user in the channel
 //in the right side bar... but it doesn't
-void Server::who(std::vector<std::string> params, Client client, std::string response) {
+void Server::who(std::vector<std::string> params, Client client) {
+	std::string responseNames;
+	std::string responseWho;
 	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
 		if (it->_name == params[0])	{
 			for (std::vector<Client>::iterator it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
-				response = ":" + it->getName() + " 352 " + it2->getNickname() + "!" + it2->getUsername() + "@" + " " + it2->getNickname() + " " + it2->getUsername() + " " + it2->getNickname() + " H :0 ";
-				response.append(":End of WHO list.\r\n");
+				// :hostname 353 nickname = #channel :nickname nickname (can be more than one here or sent in multiple messages)
+				responseNames += ":mine_test 353 luism = #test :luism\r\n";
+				//response += ":" + it->getName() + " 352 " + client.getNickname() + " " + it->_name + " " + it2->getUsername() + " mine_test localhost/4242 " + it2->getUsername() + " H :0 " + client.getNickname() + "\r\n";
+				// :hostname 354 nickname #channel nickname userIpAddress hostname nickname channelModes hopcount(0 for single server) :realname
+				responseWho += ":mine_test 354 luism #test luism 127.0.0.1 mine_test luism H 0 :luism\r\n";
 			}
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+			// :hostname 366 nickname #channel :End of /NAMES list.
+			responseNames += ":mine_test 366 luism #test :End of /NAMES list.\r\n";
+			// :hostname 315 nickname #channel :End of /WHO list.
+			responseWho += ":mine_test 315 luism #test :End of /WHO list.\r\n";
+			// concatenate the two strings
+			responseNames += responseWho;
+			//response += ":" + it->getName() + " 352 " + client.getNickname() + " " + it->_name + " :End of WHO list.\r\n";
+			if (send(client.getSocketFd(), responseNames.c_str(), responseNames.size(), 0) == -1)
 				std::cout << "error sending response\n";
 		}
 	}
-	std::cout << response << std::endl;
+	std::cout << responseNames << std::endl;
 }
 
 void Server::privmsg(std::vector<std::string> params, Client client, std::string response) {
@@ -542,3 +554,4 @@ void Server::privmsg(std::vector<std::string> params, Client client, std::string
 		}
 	}
 }
+

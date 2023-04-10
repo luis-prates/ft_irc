@@ -31,7 +31,7 @@ class Server
 
 		Channel*				getChannel(std::string channelName);
 		void 						handleChannelCommunication(Client client, Channel newChannel, std::string response);
-		void 						who(std::vector<std::string> params, Client client, std::string response);
+		void 						who(std::vector<std::string> params, Client client);
 		void 						privmsg(std::vector<std::string> params, Client client, std::string response);
 
 
