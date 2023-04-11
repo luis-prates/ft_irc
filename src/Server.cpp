@@ -248,8 +248,9 @@ int Server::handleCommands(std::string message, Client &client)
 	// get the parameters
 	std::cout << "command: " << command << std::endl;
 	params = split(message.substr(message.find(' ') + 1), ' ');
-	for (size_t i = 0; i < params.size(); i++)
+	for (size_t i = 0; i < params.size(); i++) {
 		std::cout << "param: " << params[i] << std::endl;
+	}
 	// check if the command is valid
 	if (command == "nick")
 	{
@@ -280,7 +281,7 @@ int Server::handleCommands(std::string message, Client &client)
 	else if (command == "who")
 		who(params, client);
 	else if (command == "privmsg")
-		privmsg(params, client, response);
+		privmsg(params, client);
 	else if (command == "part")
 	{
 		// check if the client is registered
@@ -538,21 +539,35 @@ void Server::who(std::vector<std::string> params, Client client) {
 	}
 }
 
-void Server::privmsg(std::vector<std::string> params, Client client, std::string response) {
+
+/** Still needs to be tested with more than one channel 
+ * 	PRIVMSG messages to other users outside the channel is not implemented
+*/
+void Server::privmsg(std::vector<std::string> params, Client client) {
+	// check if the channel exists
+	std::string response;
+	std::string msg;
 	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
-		std::cout << "channel name: " <<	it->getName() << " param: " << params[0] << std::endl;
-		if (it->_name == params[0])	{
+		/** @bug the + '\r' is a patch that may not work in all ocasions
+		 * the comparison is not working as expected */
+		if (it->_name == params[0] + '\r')	{
+			// message to channel
+ 			for (int i = 1; i < params.size(); i++)
+ 					msg += params[i] + " ";
 			for (std::vector<Client>::iterator it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
-				std::cout << "user name: " <<	it2->getUsername() << std::endl;
-				for (std::vector<std::string>::iterator it3 = params.begin(); it3 != params.end(); ++it3) {
-					response.append(*it3);
-					response.append(" ");
-				}
-				response.append("\r\n");
-				if (send(it2->getSocketFd(), response.c_str(), response.size(), 0) == -1)
-					std::cout << "error sending response\n";
+
+				/** @bug the second " :" is necessary to send messages to all clients
+				 * but the two dots are being appended to the message also
+				 * so the message is being sent as " :message"
+				*/
+				// Reply to the client to send message to channel
+ 				response = ":" + client.getNickname() + " PRIVMSG " + it->getName() + " :" + msg + "\r\n";
+
+				// Don't send the response to the sender
+				if (client.getNickname() != it2->getNickname())
+					if (send(it2->getSocketFd(), response.c_str(), response.size(), 0) == -1)
+						std::cout << "error sending response\n";
 			}
 		}
 	}
 }
-
