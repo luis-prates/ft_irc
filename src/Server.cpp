@@ -469,7 +469,9 @@ int Server::joinChannel( std::vector<std::string> params, Client &client, std::s
 			// Create a new Channel, add it to the list of channels and add the client to the channel
 			Channel newChannel(channelName, client);
 			Server::_channels.push_back(newChannel);
+			std::cout << "Channel " << newChannel.getName() << " created\n";
 			newChannel.joinChannel(client); // define the client and operator
+			std::cout << "Client " << client.getNickname() << " joined channel " << newChannel.getName() << "\n";
 			client.addChannel(channelName);
 		}
 	}
@@ -515,18 +517,18 @@ void Server::who(std::vector<std::string> params, Client client) {
 	std::string responseNames;
 	std::string responseWho;
 	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+		std::cout << "Channel: " << it->getName() << "\n";
 		if (it->_name == params[0])	{
 			for (std::vector<Client>::iterator it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
 				// :hostname 353 nickname = #channel :nickname nickname (can be more than one here or sent in multiple messages)
-				responseNames += ":mine_test 353 luism = #test :luism\r\n";
-				//response += ":" + it->getName() + " 352 " + client.getNickname() + " " + it->_name + " " + it2->getUsername() + " mine_test localhost/4242 " + it2->getUsername() + " H :0 " + client.getNickname() + "\r\n";
+				responseNames += ":mine_test 353 " + client.getNickname() + " = " + it->getName() + " " + it2->getNickname() + "\r\n";
 				// :hostname 354 nickname #channel nickname userIpAddress hostname nickname channelModes hopcount(0 for single server) :realname
-				responseWho += ":mine_test 354 luism #test luism 127.0.0.1 mine_test luism H 0 :luism\r\n";
+				responseWho += ":mine_test 354 " + client.getNickname() + " " + it->getName() + " " + it2->getNickname() + " " + it2->getIpAddress() + " mine_test " + it2->getNickname() + " H 0 :luism\r\n";
 			}
 			// :hostname 366 nickname #channel :End of /NAMES list.
-			responseNames += ":mine_test 366 luism #test :End of /NAMES list.\r\n";
+			responseNames += ":mine_test 366 " + client.getNickname() + " " + it->getName() + " :End of /NAMES list.\r\n";
 			// :hostname 315 nickname #channel :End of /WHO list.
-			responseWho += ":mine_test 315 luism #test :End of /WHO list.\r\n";
+			responseWho += ":mine_test 315 " + client.getNickname() + " " + it->getName() + " :End of /WHO list.\r\n";
 			// concatenate the two strings
 			responseNames += responseWho;
 			//response += ":" + it->getName() + " 352 " + client.getNickname() + " " + it->_name + " :End of WHO list.\r\n";
@@ -534,7 +536,6 @@ void Server::who(std::vector<std::string> params, Client client) {
 				std::cout << "error sending response\n";
 		}
 	}
-	std::cout << responseNames << std::endl;
 }
 
 void Server::privmsg(std::vector<std::string> params, Client client, std::string response) {
