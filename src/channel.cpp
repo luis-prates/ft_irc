@@ -95,7 +95,7 @@ int Server::joinChannel( std::vector<std::string> params, Client &client, std::s
 }
 
 // Create a new channel
-void Server::createNewChannel(std::string channelName, Client client, std::string response) {
+void Server::createNewChannel(std::string channelName, Client &client, std::string response) {
 	// Create a new Channel, add it to the list of channels and add the client to the channel
 	Channel newChannel(channelName, client);
 	Server::_channels.push_back(newChannel);
@@ -106,7 +106,7 @@ void Server::createNewChannel(std::string channelName, Client client, std::strin
 }
 
 // Check if channel already exists
-int	Server::checkChannel(std::string channelName, Client client){
+int	Server::checkChannel(std::string channelName, Client &client){
 	std::vector<Channel>::iterator it;
 	for(it = Server::_channels.begin(); it != Server::_channels.end(); ++it) {
 		if (it->_name == channelName)	{
@@ -118,6 +118,6 @@ int	Server::checkChannel(std::string channelName, Client client){
 	return (0);
 }
 
-	/* REFERENCES:
-	 * https://se.inf.ethz.ch/student_projects/fabian_gremper/Report.pdf
-	 */
+/* REFERENCES:
+	* https://se.inf.ethz.ch/student_projects/fabian_gremper/Report.pdf
+	*/

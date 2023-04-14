@@ -218,6 +218,7 @@ int Server::handleClientInput(Client &client)
 			std::vector<std::string> commands = split(client.getOutputBuffer(), '\012');
 			for (size_t k = 0; k < commands.size(); k++)
 			{
+				commands[k].erase(std::find(commands[k].begin(), commands[k].end(), '\r'), commands[k].end());
 				std::cout << "Command: " << commands[k] << std::endl;
 				handleCommands(commands[k], client);
 			}
@@ -302,7 +303,7 @@ int Server::handleCommands(std::string message, Client &client)
 				std::cout << "error sending response\n";
 			return (0);
 		}
-		response = "Left channel " + client.getChannel() + "\r\n";
+		response = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + client.getChannel() + " :Leaving\r\n";
 		//TODO: may need to protect this better
 		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";
@@ -445,7 +446,7 @@ Channel* Server::getChannel(std::string channelName) {
 
 // Not working as expected... thought that if I gave the correct reply the hexchat would list my user in the channel
 //in the right side bar... but it doesn't
-void Server::who(std::vector<std::string> params, Client client) {
+void Server::who(std::vector<std::string> params, Client &client) {
 	std::string responseNames;
 	std::string responseWho;
 	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
@@ -474,7 +475,7 @@ void Server::who(std::vector<std::string> params, Client client) {
 /** Still needs to be tested with more than one channel 
  * 	PRIVMSG messages to other users outside the channel is not implemented
 */
-void Server::privmsg(std::vector<std::string> params, Client client) {
+void Server::privmsg(std::vector<std::string> params, Client &client) {
 	// check if the channel exists
 	std::string response;
 	std::string msg;

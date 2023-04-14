@@ -29,13 +29,13 @@ class Server
 		int							handleUser(std::vector<std::string> params, Client &client);
 		int							joinChannel(std::vector<std::string> params, Client &client, std::string &response);
 
-		Channel*				getChannel(std::string channelName);
+		Channel*					getChannel(std::string channelName);
 		void 						rpl_Join(Client client, Channel newChannel, std::string response);
-		void 						who(std::vector<std::string> params, Client client);
-		void 						privmsg(std::vector<std::string> params, Client client);
+		void 						who(std::vector<std::string> params, Client &client);
+		void 						privmsg(std::vector<std::string> params, Client &client);
 
-		int							checkChannel(std::string channelName, Client client);
-		void 						createNewChannel(std::string channelName, Client client, std::string response);
+		int							checkChannel(std::string channelName, Client &client);
+		void 						createNewChannel(std::string channelName, Client &client, std::string response);
 
 	public:
 
