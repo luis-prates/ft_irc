@@ -284,32 +284,7 @@ int Server::handleCommands(std::string message, Client &client)
 	else if (command == "privmsg")
 		privmsg(params, client);
 	else if (command == "part")
-	{
-		// check if the client is registered
-		if (!client.isRegistered())
-		{
-			response = "Error: you must set a nickname before leaving a channel\r\n";
-			//TODO: may need to protect this better
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-			return (0);
-		}
-		// check if the client is in a channel
-		if (client.getChannel() == "")
-		{
-			response = "Error: you are not in a channel\r\n";
-			//TODO: may need to protect this better
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-			return (0);
-		}
-		response = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + client.getChannel() + " :Leaving\r\n";
-		//TODO: may need to protect this better
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-		client.addChannel("");
-		return (0);
-	}
+		part(params, client);
 	else if (command == "msg")
 	{
 		// check if the client is registered
@@ -454,14 +429,14 @@ void Server::who(std::vector<std::string> params, Client &client) {
 		if (it->_name == params[0])	{
 			for (std::vector<Client>::iterator it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
 				// :hostname 353 nickname = #channel :nickname nickname (can be more than one here or sent in multiple messages)
-				responseNames += ":mine_test 353 " + client.getNickname() + " = " + it->getName() + " " + it2->getNickname() + "\r\n";
+				responseNames += ":" + this->getHostname() + " 353 " + client.getNickname() + " = " + it->getName() + " " + it2->getNickname() + "\r\n";
 				// :hostname 354 nickname #channel nickname userIpAddress hostname nickname channelModes hopcount(0 for single server) :realname
-				responseWho += ":mine_test 354 " + client.getNickname() + " " + it->getName() + " " + it2->getNickname() + " " + it2->getIpAddress() + " mine_test " + it2->getNickname() + " H 0 :luism\r\n";
+				responseWho += ":" + this->getHostname() + " 354 " + client.getNickname() + " " + it->getName() + " " + it2->getNickname() + " " + it2->getIpAddress() + " " + this->getHostname() + " " + it2->getNickname() + " H 0 :luism\r\n";
 			}
 			// :hostname 366 nickname #channel :End of /NAMES list.
-			responseNames += ":mine_test 366 " + client.getNickname() + " " + it->getName() + " :End of /NAMES list.\r\n";
+			responseNames += ":" + this->getHostname() + " 366 " + client.getNickname() + " " + it->getName() + " :End of /NAMES list.\r\n";
 			// :hostname 315 nickname #channel :End of /WHO list.
-			responseWho += ":mine_test 315 " + client.getNickname() + " " + it->getName() + " :End of /WHO list.\r\n";
+			responseWho += ":" + this->getHostname() + " 315 " + client.getNickname() + " " + it->getName() + " :End of /WHO list.\r\n";
 			// concatenate the two strings
 			responseNames += responseWho;
 			//response += ":" + it->getName() + " 352 " + client.getNickname() + " " + it->_name + " :End of WHO list.\r\n";
@@ -479,27 +454,90 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 	// check if the channel exists
 	std::string response;
 	std::string msg;
-	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
-		/** @bug the + '\r' is a patch that may not work in all ocasions
-		 * the comparison is not working as expected */
-		if (it->_name == params[0] + '\r')	{
-			// message to channel
- 			for (int i = 1; i < params.size(); i++)
- 					msg += params[i] + " ";
-			for (std::vector<Client>::iterator it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
+	std::vector<Channel>::iterator itChannel;
+	std::vector<Client>::iterator itClient;
 
-				/** @bug the second " :" is necessary to send messages to all clients
-				 * but the two dots are being appended to the message also
-				 * so the message is being sent as " :message"
-				*/
-				// Reply to the client to send message to channel
- 				response = ":" + client.getNickname() + " PRIVMSG " + it->getName() + " :" + msg + "\r\n";
+	if (params[0].at(0) == '#') {
+		for(itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
+			/** @bug the + '\r' is a patch that may not work in all ocasions
+			 * the comparison is not working as expected */
+			if (itChannel->_name == params[0])	{
+				// message to channel
+				for (int i = 1; i < params.size(); i++)
+						msg += params[i] + " ";
+				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
 
-				// Don't send the response to the sender
-				if (client.getNickname() != it2->getNickname())
-					if (send(it2->getSocketFd(), response.c_str(), response.size(), 0) == -1)
-						std::cout << "error sending response\n";
+					/** @bug the second " :" is necessary to send messages to all clients
+					 * but the two dots are being appended to the message also
+					 * so the message is being sent as " :message"
+					 * ! I believe this is fixed now
+					*/
+					// Reply to the client to send message to channel
+					response = ":" + client.getNickname() + " PRIVMSG " + itChannel->getName() + " " + msg + "\r\n";
+
+					// Don't send the response to the sender
+					if (client.getNickname() != itClient->getNickname())
+						if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
+							std::cout << "error sending response\n";
+				}
+				break;
 			}
 		}
+		if (itChannel == _channels.end()) {
+			response = ":" + this->getHostname() + " 403 " + client.getNickname() + " " + params[0] + " :No such channel\r\n";
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+		}
 	}
+	else {
+		// message to user
+		for (itClient = _clients.begin(); itClient != _clients.end(); ++itClient) {
+			if (itClient->getNickname() == params[0]) {
+				for (int i = 1; i < params.size(); i++)
+					msg += params[i] + " ";
+				// Reply to the client to send message to user
+				response = ":" + client.getNickname() + " PRIVMSG " + itClient->getNickname() + " " + msg + "\r\n";
+				if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
+					std::cout << "error sending response\n";
+				break;
+			}
+		}
+		if (itClient == _clients.end()) {
+			response = ":" + this->getHostname() + " 401 " + client.getNickname() + " " + params[0] + " :No such nick\r\n";
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+		}
+		// check if the user exists
+		// send the message to the user
+	}
+}
+
+void	Server::part(std::vector<std::string> params, Client &client) {
+	std::string response;
+	std::vector<Client>::iterator it2;
+
+	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+		if (it->_name == params[0])	{
+			// remove the client from the channel
+			for (it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
+				if (client.getNickname() == it2->getNickname()) {
+					it->_clients.erase(it2);
+					break;
+				}
+			}
+			if (it2 == it->_clients.end()) {
+				response = ":" + this->getHostname() + " 442 " + it2->getNickname() + " " + it->getName() + " :You're not on that channel\r\n";
+			}
+			if (response.empty())
+				// Reply to the client to confirm the part
+				response = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + it->getName() + "\r\n";
+			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+				std::cout << "error sending response\n";
+			return ;
+		}
+	}
+	response = ":" + this->getHostname() + " 403 " + client.getNickname() + " " + params[0] + " :No such channel\r\n";
+	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+		std::cout << "error sending response\n";
+	return ;
 }

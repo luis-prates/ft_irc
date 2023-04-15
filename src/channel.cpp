@@ -99,6 +99,7 @@ void Server::createNewChannel(std::string channelName, Client &client, std::stri
 	// Create a new Channel, add it to the list of channels and add the client to the channel
 	Channel newChannel(channelName, client);
 	Server::_channels.push_back(newChannel);
+	
 	std::cout << "Channel " << newChannel.getName() << " created\n";
 	newChannel.joinChannel(client); // define the client and operator
 	std::cout << "Client " << client.getNickname() << " joined channel " << newChannel.getName() << "\n";

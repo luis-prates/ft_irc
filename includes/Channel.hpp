@@ -10,13 +10,13 @@ class Channel
 	
 public:
 
-	std::string						_name;
-	int										_maxClients;
-	int 									creationTime;
-	std::vector<Client> 	_clients;
+	std::string				_name;
+	int						_maxClients;
+	int						creationTime;
+	std::vector<Client>		_clients;
 	std::vector<Client>		_operators;
-	std::string 					_topic;
-	std::vector<char*> 		_flags;
+	std::string				_topic;
+	std::vector<char*>		_flags;
 
 
 	explicit Channel(std::string name, Client client): _name(name)

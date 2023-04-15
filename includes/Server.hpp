@@ -4,6 +4,8 @@
 # include "../includes/Channel.hpp"
 # include "irc.hpp"
 
+# define SERVERNAME "ircserv"
+
 class Server
 {
 	public:
@@ -15,8 +17,9 @@ class Server
 		int					_fd;
 		int					_addrlen;
 		int					_maxFd;
-		fd_set							_readFds;
+		fd_set				_readFds;
 		struct sockaddr_in	_address;
+		std::string			_hostname;
 
 		std::vector<Client>		_clients;
 
@@ -30,9 +33,10 @@ class Server
 		int							joinChannel(std::vector<std::string> params, Client &client, std::string &response);
 
 		Channel*					getChannel(std::string channelName);
-		void 						rpl_Join(Client client, Channel newChannel, std::string response);
-		void 						who(std::vector<std::string> params, Client &client);
-		void 						privmsg(std::vector<std::string> params, Client &client);
+		void						rpl_Join(Client client, Channel newChannel, std::string response);
+		void						who(std::vector<std::string> params, Client &client);
+		void						privmsg(std::vector<std::string> params, Client &client);
+		void						part(std::vector<std::string> params, Client &client);
 
 		int							checkChannel(std::string channelName, Client &client);
 		void 						createNewChannel(std::string channelName, Client &client, std::string response);
@@ -48,12 +52,14 @@ class Server
 		int					getFd() const { return (_fd); }
 		int					getAddrlen() const { return (_addrlen); }
 		struct sockaddr_in	getAddress() const { return (_address); }
+		std::string			getHostname() const { return (_hostname); }
 
 		void				setPort(int port) { _port = port; }
 		void				setSocket(int socket) { _socket = socket; }
 		void				setFd(int fd) { _fd = fd; }
 		void				setAddrlen(int addrlen) { _addrlen = addrlen; }
 		void				setAddress(struct sockaddr_in address) { _address = address; }
+		void				setHostname(std::string hostname) { _hostname = hostname; }
 
 		int					setup_server(int port);
 		int					run(std::vector<Client> &clients);
