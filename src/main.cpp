@@ -29,12 +29,13 @@ int main (int argc, char* argv[]) {
 
 	// Create an array of client objects to store information about each connected client
 	std::vector<Client> clients(MAX_CLIENTS, Client(0)); // initialize all elements with an invalid socket fd
+	server.setClients(clients);
 
 	while (true)
 	{
 		try
 		{
-			server.run(clients);
+			server.run();
 		}
 		catch(const std::exception& e)
 		{

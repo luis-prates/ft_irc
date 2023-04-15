@@ -37,6 +37,8 @@ class Server
 		void						who(std::vector<std::string> params, Client &client);
 		void						privmsg(std::vector<std::string> params, Client &client);
 		void						part(std::vector<std::string> params, Client &client);
+		void						quit(std::vector<std::string> params, Client &client);
+		void						user(std::vector<std::string> params, Client &client);
 
 		int							checkChannel(std::string channelName, Client &client);
 		void 						createNewChannel(std::string channelName, Client &client, std::string response);
@@ -60,9 +62,10 @@ class Server
 		void				setAddrlen(int addrlen) { _addrlen = addrlen; }
 		void				setAddress(struct sockaddr_in address) { _address = address; }
 		void				setHostname(std::string hostname) { _hostname = hostname; }
+		void				setClients(std::vector<Client> &clients) { _clients = clients; }
 
 		int					setup_server(int port);
-		int					run(std::vector<Client> &clients);
+		int					run();
 		int					clear_fd_set();
 
 		class ServerException : public std::exception

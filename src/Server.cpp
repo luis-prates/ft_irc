@@ -70,9 +70,9 @@ int Server::setup_server(int port)
 	return (0);
 }
 
-int Server::run(std::vector<Client> &clients)
+int Server::run()
 {
-	fdResetNSet(clients);
+	fdResetNSet(_clients);
 
 	std::cout << "Waiting for new connections...\n";
 	if (select(_maxFd + 1, &_readFds, NULL, NULL, NULL) < 0 && errno == EINTR)
@@ -84,16 +84,17 @@ int Server::run(std::vector<Client> &clients)
 	//If something happened on the master socket,
 	//then its an incoming connection
 	if (FD_ISSET(this->getSocket(), &_readFds))
-		handleNewConnection(clients);
+		handleNewConnection(_clients);
 
 	//else it's some IO operation on some other socket
 	for (int i = 0; i < MAX_CLIENTS; i++)
 	{
-		if (FD_ISSET(clients[i].getSocketFd(), &_readFds))
+		if (FD_ISSET(_clients[i].getSocketFd(), &_readFds))
 		{
+
 			//Check if it was for closing, and also read the
 			//incoming message
-			if (handleClientInput(clients[i]) == 0)
+			if (handleClientInput(_clients[i]) == 0)
 			{
 				//Echo back the message that came in
 				std::cout << "Handled client input with successs\n";
@@ -261,21 +262,7 @@ int Server::handleCommands(std::string message, Client &client)
 	// The syntax for this command is "USER <username> <hostname> <servername> <realname>
 	// For example, "USER John localhost irc.example.com John Doe".
 	else if (command == "user")
-	{
-		if (params.size() < 4)
-		{
-			std::cout << "user commands params are invalid\n";
-			response = "Error: invalid parameters\r\n";
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-			return (0);
-		}
-		// check if the username is valid
-		response = "User set to " + params[0] + "\r\n";
-		//TODO: may need to protect this better
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-	}
+		user(params, client);
 	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
 	else if (command == "join")
 		return (joinChannel(params, client, response));
@@ -375,7 +362,8 @@ std::vector<std::string> Server::split(std::string message, char del)
 
 int Server::handleNick(std::vector<std::string> params, Client &client)
 {
-	std::string response;
+	std::string	response;
+	std::string	prevNickname;
 
 	// check if the nickname is valid
 	// The syntax for this command is "NICK <nickname>". For example, "NICK John"
@@ -385,9 +373,13 @@ int Server::handleNick(std::vector<std::string> params, Client &client)
 		send(client.getSocketFd(), response.c_str(), response.size(), 0);
 		return (0);
 	}
+	prevNickname = client.getNickname();
 	client.setNickname(params[0]);
 	client.setRegistered(true);
-	response = "Nickname set to " + params[0] + "\r\n";
+	if (prevNickname.empty())
+		response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " NICK :" + params[0] + "\r\n";
+	else
+		response = ":" + prevNickname + "!" + client.getUsername() + "@" + client.getIpAddress() + " NICK :" + params[0] + "\r\n";
 	//TODO: may need to protect this better
 	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 			std::cout << "error sending response\n";
@@ -431,7 +423,7 @@ void Server::who(std::vector<std::string> params, Client &client) {
 				// :hostname 353 nickname = #channel :nickname nickname (can be more than one here or sent in multiple messages)
 				responseNames += ":" + this->getHostname() + " 353 " + client.getNickname() + " = " + it->getName() + " " + it2->getNickname() + "\r\n";
 				// :hostname 354 nickname #channel nickname userIpAddress hostname nickname channelModes hopcount(0 for single server) :realname
-				responseWho += ":" + this->getHostname() + " 354 " + client.getNickname() + " " + it->getName() + " " + it2->getNickname() + " " + it2->getIpAddress() + " " + this->getHostname() + " " + it2->getNickname() + " H 0 :luism\r\n";
+				responseWho += ":" + this->getHostname() + " 354 " + client.getNickname() + " 152 " + it->getName() + " " + it2->getUsername() + " " + it2->getIpAddress() + " " + this->getHostname() + " " + it2->getNickname() + " H 0 :realname\r\n";
 			}
 			// :hostname 366 nickname #channel :End of /NAMES list.
 			responseNames += ":" + this->getHostname() + " 366 " + client.getNickname() + " " + it->getName() + " :End of /NAMES list.\r\n";
@@ -507,8 +499,6 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";
 		}
-		// check if the user exists
-		// send the message to the user
 	}
 }
 
@@ -540,4 +530,17 @@ void	Server::part(std::vector<std::string> params, Client &client) {
 	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 		std::cout << "error sending response\n";
 	return ;
+}
+
+void	Server::user(std::vector<std::string> params, Client &client) {
+	std::string response;
+
+	if (params.size() < 4) {
+		response = ":" + this->getHostname() + " 461 " + client.getNickname() + " USER :Not enough parameters\r\n";
+		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+			std::cout << "error sending response\n";
+		return ;
+	}
+	client.setUsername(params[0]);
+	// client.setRealname(params[3]);
 }
