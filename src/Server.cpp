@@ -8,7 +8,7 @@ Server::Server()
 }
 
 
-Server::Server(int port)
+Server::Server(std::string password): _password(password)
 {
 	
 }
@@ -165,6 +165,9 @@ int Server::handleNewConnection(std::vector<Client> &clients)
 			", ip is: " << inet_ntoa(tmpSocket.address.sin_addr) << \
 			", port: " << ntohs(tmpSocket.address.sin_port) << std::endl;
 	
+	// TODO: needs changes to only display message after
+	// TODO: checking if password is correct
+	// TODO: perhaps moving it to the handling of the commands funcion
 	//send new connection greeting message
 	if(send(tmpSocket.socket, message.c_str(), message.size(), 0) != message.size())
 	{
@@ -222,6 +225,8 @@ int Server::handleClientInput(Client &client)
 				commands[k].erase(std::find(commands[k].begin(), commands[k].end(), '\r'), commands[k].end());
 				std::cout << "Command: " << commands[k] << std::endl;
 				handleCommands(commands[k], client);
+				// TODO: add a way to break this loop
+				// TODO: when password is wrong
 			}
 			client.getOutputBuffer().clear();
 		}
@@ -255,10 +260,7 @@ int Server::handleCommands(std::string message, Client &client)
 	}
 	// check if the command is valid
 	if (command == "nick")
-	{
-		if (handleNick(params, client) == -1)
-			return (-1);
-	}
+		handleNick(params, client);
 	// The syntax for this command is "USER <username> <hostname> <servername> <realname>
 	// For example, "USER John localhost irc.example.com John Doe".
 	else if (command == "user")
@@ -326,6 +328,29 @@ int Server::handleCommands(std::string message, Client &client)
 				std::cout << "error sending response\n";
 		return 1;
 	}
+	else if (command == "pass")
+	{
+		// check if the client is registered
+		if (client.isRegistered())
+		{
+			response = "Error: you are already registered\r\n";
+		}
+		// check if the password is correct
+		else if (params[0] != _password)
+		{
+			response = "Error: invalid password\r\n";
+			std::cout << "Invalid password\n";
+			// TODO needs to close connection
+			// TODO and check how to break from the command loop
+			//close(client.getSocketFd());
+			//fdResetNSet(_clients);
+		}
+		else
+		{
+			response = "Password accepted\r\n";
+			std::cout << "Password accepted\n";
+		}
+	}
 	else
 	{
 		response = "Error: invalid command\r\n";
@@ -360,7 +385,7 @@ std::vector<std::string> Server::split(std::string message, char del)
 	return (v);
 }
 
-int Server::handleNick(std::vector<std::string> params, Client &client)
+void Server::handleNick(std::vector<std::string> params, Client &client)
 {
 	std::string	response;
 	std::string	prevNickname;
@@ -371,7 +396,7 @@ int Server::handleNick(std::vector<std::string> params, Client &client)
 	{
 		response = "Error: nickname cannot contain spaces\r\n";
 		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
+		return ;
 	}
 	prevNickname = client.getNickname();
 	client.setNickname(params[0]);
@@ -383,7 +408,7 @@ int Server::handleNick(std::vector<std::string> params, Client &client)
 	//TODO: may need to protect this better
 	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 			std::cout << "error sending response\n";
-	return (0);
+	return ;
 }
 
 

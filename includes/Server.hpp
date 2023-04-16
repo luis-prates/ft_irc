@@ -20,6 +20,7 @@ class Server
 		fd_set				_readFds;
 		struct sockaddr_in	_address;
 		std::string			_hostname;
+		std::string			_password;
 
 		std::vector<Client>		_clients;
 
@@ -28,7 +29,7 @@ class Server
 		int							handleClientInput(Client &client);
 		int 						handleCommands(std::string message, Client &client);
 		std::vector<std::string>	split(std::string message, char del);
-		int							handleNick(std::vector<std::string> params, Client &client);
+		void						handleNick(std::vector<std::string> params, Client &client);
 		int							handleUser(std::vector<std::string> params, Client &client);
 		int							joinChannel(std::vector<std::string> params, Client &client, std::string &response);
 
@@ -46,7 +47,7 @@ class Server
 	public:
 
 		Server();
-		Server(int port);
+		Server(std::string password);
 
 		~Server();
 		int					getPort() const { return (_port); }

@@ -8,8 +8,8 @@ int main (int argc, char* argv[]) {
 	}
 
 	int portNumber = std::atoi(argv[1]);
-	int serverPassword = std::atoi(argv[2]);
-	Server server;
+	//int serverPassword = std::atoi(argv[2]);
+	Server server(argv[2]);
 	server.setHostname(SERVERNAME);
 	try {
 		server.setup_server(portNumber);
