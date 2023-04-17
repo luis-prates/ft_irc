@@ -268,6 +268,8 @@ int Server::handleCommands(std::string message, Client &client)
 	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
 	else if (command == "join")
 		return (joinChannel(params, client, response));
+	else if (command == "mode")
+		mode(params[0], client);
 	else if (command == "who")
 		who(params, client);
 	else if (command == "privmsg")
@@ -570,3 +572,5 @@ void	Server::user(std::vector<std::string> params, Client &client) {
 	client.setUsername(params[0]);
 	// client.setRealname(params[3]);
 }
+
+
