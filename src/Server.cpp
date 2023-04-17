@@ -533,16 +533,17 @@ void	Server::part(std::vector<std::string> params, Client &client) {
 
 	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
 		if (it->_name == params[0])	{
+
 			// remove the client from the channel
-			for (it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
-				if (client.getNickname() == it2->getNickname()) {
-					it->_clients.erase(it2);
+			for (it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2)
+				if (client.getNickname() == it2->getNickname())
 					break;
-				}
-			}
-			if (it2 == it->_clients.end()) {
+
+			if (it2 == it->_clients.end())
 				response = ":" + this->getHostname() + " 442 " + it2->getNickname() + " " + it->getName() + " :You're not on that channel\r\n";
-			}
+			else
+				it->_clients.erase(it2);
+
 			if (response.empty())
 				// Reply to the client to confirm the part
 				response = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + it->getName() + "\r\n";
