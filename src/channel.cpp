@@ -74,6 +74,22 @@ int Server::joinChannel( std::vector<std::string> params, Client &client, std::s
 		return (0);
 	}
 
+	// TODO: Check if channel name has comma
+	if (params[0].find(',') != std::string::npos)
+	{
+		response = "Error: channel name cannot contain commas\r\n";
+		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		return (0);
+	}
+
+	//TODO: Check if channel name has a control G/BEL
+	if (params[0].find('\a') != std::string::npos)
+	{
+		response = "Error: channel name cannot contain control G/BEL\r\n";
+		send(client.getSocketFd(), response.c_str(), response.size(), 0);
+		return (0);
+	}
+
 	// create a channel object and add it to the list of channels
 	std::string channelName = params[0];
 
