@@ -543,12 +543,17 @@ void	Server::part(std::vector<std::string> params, Client &client) {
 
 			if (it2 == it->_clients.end())
 				response = ":" + this->getHostname() + " 442 " + it2->getNickname() + " " + it->getName() + " :You're not on that channel\r\n";
-			else
-				it->_clients.erase(it2);
 
-			if (response.empty())
+			std::cout << "channel is: " << it->getName() << std::endl;
+
+			if (response.empty()) {
 				// Reply to the client to confirm the part
 				response = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + it->getName() + "\r\n";
+				//! perhaps this has to be done after the send
+				it->_clients.erase(it2);
+				if (it->_clients.empty())
+					_channels.erase(it);
+			}
 			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 				std::cout << "error sending response\n";
 			return ;
