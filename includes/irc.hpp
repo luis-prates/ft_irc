@@ -6,7 +6,7 @@
 /*   By: lprates <lprates@student.42lisboa.com>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/18 15:17:37 by lprates           #+#    #+#             */
-/*   Updated: 2023/04/02 17:18:28 by lprates          ###   ########.fr       */
+/*   Updated: 2023/04/19 17:59:44 by lprates          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,6 +56,8 @@ typedef struct	s_socket
 
 // utils.cpp
 void	handleSignal(int signal);
+
+int		sendMessage(const int socket, const std::string &message);
 
 // input.cpp
 

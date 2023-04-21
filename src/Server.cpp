@@ -84,7 +84,8 @@ int Server::run()
 	//If something happened on the master socket,
 	//then its an incoming connection
 	if (FD_ISSET(this->getSocket(), &_readFds))
-		handleNewConnection(_clients);
+		if (handleNewConnection(_clients))
+			return (EXIT_FAILURE);
 
 	//else it's some IO operation on some other socket
 	for (int i = 0; i < MAX_CLIENTS; i++)
@@ -102,7 +103,7 @@ int Server::run()
 			}
 		}
 	}
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 int Server::clear_fd_set()
@@ -147,6 +148,7 @@ int Server::fdResetNSet(std::vector<Client> &clients)
 	return (0);
 }
 
+// TODO: need to check in case a client get killed
 int Server::handleNewConnection(std::vector<Client> &clients)
 {
 	t_socket tmpSocket;
@@ -154,10 +156,12 @@ int Server::handleNewConnection(std::vector<Client> &clients)
 	std::string message(WELCOME);
 
 	if ((tmpSocket.socket = accept(this->getSocket(),
-			(struct sockaddr *)&tmpSocket.address, (socklen_t*)&tmpSocket.addrlen)) < 0 /*&& errno == EINTR*/)
+			(struct sockaddr *)&tmpSocket.address, (socklen_t*)&tmpSocket.addrlen)) < 0)
 	{
 		perror("accept");
-		throw ServerException();
+		//fdResetNSet(clients);
+		return (EXIT_FAILURE);
+		//throw ServerException();
 	}
 		
 	//inform user of socket number - used in send and receive commands
@@ -192,12 +196,13 @@ int Server::handleNewConnection(std::vector<Client> &clients)
 
 int Server::handleClientInput(Client &client)
 {
+	int returnValue;
 	int valread;
 	char buffer[BUFFER_SIZE];
 
 	//Check if it was for closing , and also read the 
 	//incoming message
-	if ((valread = recv(client.getSocketFd(), buffer, 1024, 0)) == 0)
+	if ((valread = recv(client.getSocketFd(), buffer, 1024, 0)) <= 0)
 	{
 		std::cout << "Host disconnected, ip: " << client.getIpAddress() << \
 				" port:" << client.getPort() << std::endl;
@@ -206,6 +211,11 @@ int Server::handleClientInput(Client &client)
 		close(client.getSocketFd());
 		FD_CLR(client.getSocketFd(), &_readFds);
 		client.setSocketFd(0);
+		for (int j = 0; j < _channels.size(); j++)
+		{
+			if (_channels[j].removeClient(client))
+				std::cout << "Removed client from channel: " << _channels[j].getName() << std::endl;
+		}
 	}
 	//Echo back the message that came in 
 	else 
@@ -224,9 +234,27 @@ int Server::handleClientInput(Client &client)
 			{
 				commands[k].erase(std::find(commands[k].begin(), commands[k].end(), '\r'), commands[k].end());
 				std::cout << "Command: " << commands[k] << std::endl;
-				handleCommands(commands[k], client);
+				returnValue = handleCommands(commands[k], client);
 				// TODO: add a way to break this loop
 				// TODO: when password is wrong
+				switch (returnValue)
+				{
+					case -1:
+						std::cout << "Command not found\n";
+						break;
+					case 0:
+						std::cout << "Command handled with success\n";
+						break;
+					case 1:
+						std::cout << "Unknown error\n";
+						break;
+					case 2:
+						close(client.getSocketFd());
+						FD_CLR(client.getSocketFd(), &_readFds);
+						client.setSocketFd(0);
+						client.getOutputBuffer().clear();
+						return (EXIT_FAILURE);
+				}
 			}
 			client.getOutputBuffer().clear();
 		}
@@ -283,8 +311,8 @@ int Server::handleCommands(std::string message, Client &client)
 		{
 			response = "Error: you must set a nickname before sending a message\r\n";
 			//TODO: may need to protect this better
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
 			return (0);
 		}
 		// check if the client is in a channel
@@ -292,8 +320,8 @@ int Server::handleCommands(std::string message, Client &client)
 		{
 			response = "Error: you are not in a channel\r\n";
 			//TODO: may need to protect this better
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
 			return (0);
 		}
 		// check if the message is empty
@@ -301,15 +329,15 @@ int Server::handleCommands(std::string message, Client &client)
 		{
 			response = "Error: message cannot be empty\r\n";
 			//TODO: may need to protect this better
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
 			return (0);
 		}
 		//TODO check message format
 		response = client.getNickname() + ": " + params[0] + "\r\n";
 		//TODO: may need to protect this better
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
 		
 		return (0);
 	}
@@ -320,14 +348,14 @@ int Server::handleCommands(std::string message, Client &client)
 		{
 			response = "Error: you must set a nickname before quitting\r\n";
 			//TODO: may need to protect this better
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
 			return (0);
 		}
 		response = "Goodbye!\r\n";
 		//TODO: may need to protect this better
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
 		return 1;
 	}
 	else if (command == "pass")
@@ -344,8 +372,7 @@ int Server::handleCommands(std::string message, Client &client)
 			std::cout << "Invalid password\n";
 			// TODO needs to close connection
 			// TODO and check how to break from the command loop
-			//close(client.getSocketFd());
-			//fdResetNSet(_clients);
+			return (2);
 		}
 		else
 		{
@@ -357,13 +384,11 @@ int Server::handleCommands(std::string message, Client &client)
 	{
 		response = "Error: invalid command\r\n";
 		//TODO: may need to protect this better
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
-		return (0);
+		if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
+		return (-1);
 	}
-
-
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 std::vector<std::string> Server::split(std::string message, char del)
@@ -504,8 +529,8 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 		}
 		if (itChannel == _channels.end()) {
 			response = ":" + this->getHostname() + " 403 " + client.getNickname() + " " + params[0] + " :No such channel\r\n";
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return ;
 		}
 	}
 	else {
@@ -523,8 +548,8 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 		}
 		if (itClient == _clients.end()) {
 			response = ":" + this->getHostname() + " 401 " + client.getNickname() + " " + params[0] + " :No such nick\r\n";
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return ;
 		}
 	}
 }
@@ -543,19 +568,16 @@ void	Server::part(std::vector<std::string> params, Client &client) {
 
 			if (it2 == it->_clients.end())
 				response = ":" + this->getHostname() + " 442 " + it2->getNickname() + " " + it->getName() + " :You're not on that channel\r\n";
-
-			std::cout << "channel is: " << it->getName() << std::endl;
-
-			if (response.empty()) {
+			else
 				// Reply to the client to confirm the part
 				response = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + it->getName() + "\r\n";
-				//! perhaps this has to be done after the send
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return ;
+			if (response.find("PART") != std::string::npos) {
 				it->_clients.erase(it2);
 				if (it->_clients.empty())
 					_channels.erase(it);
 			}
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
 			return ;
 		}
 	}

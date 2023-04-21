@@ -27,7 +27,7 @@ class Server
 		int							fdResetNSet(std::vector<Client> &clients);
 		int							handleNewConnection(std::vector<Client> &clients);
 		int							handleClientInput(Client &client);
-		int 						handleCommands(std::string message, Client &client);
+		int							handleCommands(std::string message, Client &client);
 		std::vector<std::string>	split(std::string message, char del);
 		void						handleNick(std::vector<std::string> params, Client &client);
 		int							handleUser(std::vector<std::string> params, Client &client);

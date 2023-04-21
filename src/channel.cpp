@@ -9,14 +9,15 @@
 		_operators.push_back(op);
 	}
 
-	void Channel::removeClient(Client client)	{
-		for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
-			if (it->getNickname() == client.getNickname()) {
-				_clients.erase(it);
-				break;
-			}
+	bool	Channel::removeClient(Client client) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == client.getNickname()) {
+			_clients.erase(it);
+			return (true);
 		}
 	}
+	return (false);
+}
 
 	void Channel::removeOp(Client op)	{
 		for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
@@ -132,6 +133,14 @@ int	Server::checkChannel(std::string channelName, Client &client){
 		}
 	}
 	return (0);
+}
+
+bool	Channel::isClientInChannel(Client client) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == client.getNickname())
+			return (true);
+	}
+	return (false);
 }
 
 /* REFERENCES:

@@ -33,3 +33,13 @@ void	handleSignal(int signal)
 	}
 	return ;
 }
+
+int	sendMessage(const int socket, const std::string &message)
+{
+	if (send(socket, message.c_str(), message.size(), 0) == -1)
+	{
+		std::cout << "Error sending message" << std::endl;
+		return (EXIT_FAILURE);
+	}
+	return (EXIT_SUCCESS);
+}

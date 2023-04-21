@@ -16,8 +16,8 @@ void Server::mode(std::string channel_name, Client &client) {
 	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
 		if (it->_name == channel_name) {
 			response = ":" + this->getHostname() + " 324 " + client.getNickname() + " " + it->_name + " " + it->getMode() + "\r\n";
-			if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-				std::cout << "error sending response\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return ;
 		}
 		else
 			response = "Channel not found\n";
