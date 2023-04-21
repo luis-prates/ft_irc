@@ -6,7 +6,7 @@
 /*   By: lprates <lprates@student.42lisboa.com>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/03/18 15:17:37 by lprates           #+#    #+#             */
-/*   Updated: 2023/04/19 17:59:44 by lprates          ###   ########.fr       */
+/*   Updated: 2023/04/22 00:08:40 by lprates          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,7 +43,7 @@
 # define TRUE   1 
 # define FALSE  0
 
-# define WELCOME "Welcome to our IRC channel, where the chat is always on fire and the puns are #IRCredible!\r\n"
+# define WELCOME "Welcome to our IRC channel, where the chat is always on fire and the puns are #IRCredible!"
 
 typedef struct	s_socket
 {

@@ -153,7 +153,6 @@ int Server::handleNewConnection(std::vector<Client> &clients)
 {
 	t_socket tmpSocket;
 	tmpSocket.addrlen = sizeof(tmpSocket.address);
-	std::string message(WELCOME);
 
 	if ((tmpSocket.socket = accept(this->getSocket(),
 			(struct sockaddr *)&tmpSocket.address, (socklen_t*)&tmpSocket.addrlen)) < 0)
@@ -168,16 +167,6 @@ int Server::handleNewConnection(std::vector<Client> &clients)
 	std::cout << "New connection, socket fd is " << tmpSocket.socket << \
 			", ip is: " << inet_ntoa(tmpSocket.address.sin_addr) << \
 			", port: " << ntohs(tmpSocket.address.sin_port) << std::endl;
-	
-	// TODO: needs changes to only display message after
-	// TODO: checking if password is correct
-	// TODO: perhaps moving it to the handling of the commands funcion
-	//send new connection greeting message
-	if(send(tmpSocket.socket, message.c_str(), message.size(), 0) != message.size())
-	{
-		perror("send");
-		throw ServerException();
-	}
 
 	//add new socket to array of sockets
 	for (int i = 0; i < MAX_CLIENTS; i++)
@@ -429,7 +418,6 @@ void Server::handleNick(std::vector<std::string> params, Client &client)
 	}
 	prevNickname = client.getNickname();
 	client.setNickname(params[0]);
-	client.setRegistered(true);
 	if (prevNickname.empty())
 		response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " NICK :" + params[0] + "\r\n";
 	else
@@ -590,8 +578,8 @@ void	Server::part(std::vector<std::string> params, Client &client) {
 }
 
 void	Server::user(std::vector<std::string> params, Client &client) {
-	std::string	response;
 	std::string	realName;
+	std::string	response;
 
 	if (params.size() < 4) {
 		response = ":" + this->getHostname() + " 461 " + client.getNickname() + " USER :Not enough parameters\r\n";
@@ -599,11 +587,25 @@ void	Server::user(std::vector<std::string> params, Client &client) {
 			std::cout << "error sending response\n";
 		return ;
 	}
-	client.setUsername(params[0]);
-	for (int i = 3; i < params.size(); i++)
-		realName += params[i] + " ";
-	realName.erase(realName.size() - 1);
-	client.setRealname(realName);
+	else {
+		client.setUsername(params[0]);
+		for (int i = 3; i < params.size(); i++)
+			realName += params[i] + " ";
+		realName.erase(realName.size() - 1);
+		client.setRealname(realName);
+		client.setRegistered(true);
+		this->rpl_Welcome(client);
+	}
 }
 
+void Server::rpl_Welcome(const Client &client)
+{
+	std::string	response;
 
+	response = ":" + this->getHostname() + " 001 " + client.getNickname() + " :" + WELCOME + " " + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + "\r\n";
+	response += ":" + this->getHostname() + " 002 " + client.getNickname() + " :Your host is " + this->getHostname() + ", running version 0.6\r\n";
+	response += ":" + this->getHostname() + " 003 " + client.getNickname() + " :This server was created sometime in the near future\r\n";
+	response += ":" + this->getHostname() + " 004 " + client.getNickname() + " " + this->getHostname() + " 0.6 ao bcehiIklmnoOpqrstv\r\n";
+	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+		std::cout << "error sending response\n";
+}
