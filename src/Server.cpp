@@ -352,7 +352,9 @@ int Server::handleCommands(std::string message, Client &client)
 		// check if the client is registered
 		if (client.isRegistered())
 		{
-			response = "Error: you are already registered\r\n";
+			response = ":" + this->getHostname() +" 462 " + client.getNickname() + " :You may not reregister\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
 		}
 		// check if the password is correct
 		else if (params[0] != _password)
