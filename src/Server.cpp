@@ -368,8 +368,10 @@ int Server::handleCommands(std::string message, Client &client)
 		// check if the password is correct
 		else if (params[0] != _password)
 		{
-			response = "Error: invalid password\r\n";
-			std::cout << "Invalid password\n";
+			// asterisk is used to replace any nickname
+			response = ":" + this->getHostname() +" 464 *" + " :Incorrect password\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
 			// TODO needs to close connection
 			// TODO and check how to break from the command loop
 			return (2);
@@ -475,7 +477,7 @@ void Server::who(std::vector<std::string> params, Client &client) {
 				// :hostname 353 nickname = #channel :nickname nickname (can be more than one here or sent in multiple messages)
 				responseNames += ":" + this->getHostname() + " 353 " + client.getNickname() + " = " + it->getName() + " " + it2->getNickname() + "\r\n";
 				// :hostname 354 nickname #channel nickname userIpAddress hostname nickname channelModes hopcount(0 for single server) :realname
-				responseWho += ":" + this->getHostname() + " 354 " + client.getNickname() + " 152 " + it->getName() + " " + it2->getUsername() + " " + it2->getIpAddress() + " " + this->getHostname() + " " + it2->getNickname() + " H 0 :realname\r\n";
+				responseWho += ":" + this->getHostname() + " 354 " + client.getNickname() + " 152 " + it->getName() + " " + it2->getUsername() + " " + it2->getIpAddress() + " " + this->getHostname() + " " + it2->getNickname() + " H 0 " + it2->getRealname() + "\r\n";
 			}
 			// :hostname 366 nickname #channel :End of /NAMES list.
 			responseNames += ":" + this->getHostname() + " 366 " + client.getNickname() + " " + it->getName() + " :End of /NAMES list.\r\n";
@@ -588,7 +590,8 @@ void	Server::part(std::vector<std::string> params, Client &client) {
 }
 
 void	Server::user(std::vector<std::string> params, Client &client) {
-	std::string response;
+	std::string	response;
+	std::string	realName;
 
 	if (params.size() < 4) {
 		response = ":" + this->getHostname() + " 461 " + client.getNickname() + " USER :Not enough parameters\r\n";
@@ -597,7 +600,10 @@ void	Server::user(std::vector<std::string> params, Client &client) {
 		return ;
 	}
 	client.setUsername(params[0]);
-	// client.setRealname(params[3]);
+	for (int i = 3; i < params.size(); i++)
+		realName += params[i] + " ";
+	realName.erase(realName.size() - 1);
+	client.setRealname(realName);
 }
 
 

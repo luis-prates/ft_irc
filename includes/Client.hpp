@@ -19,6 +19,8 @@ class Client
 		void								setNickname(const std::string& nickname) { _nickname = nickname; }
 		const std::string&					getUsername() const { return (_username); }
 		void								setUsername(const std::string& username) { _username = username; }
+		const std::string&					getRealname() const { return (_realname); }
+		void								setRealname(const std::string& realname) { _realname = realname; }
 		const std::string&					getChannel() const { return (_channels[0]); }
 		void								addChannel(const std::string& channel) { _channels.push_back(channel); }
 		bool								isOperator() const { return (_isOperator); }
@@ -35,6 +37,7 @@ class Client
 		bool							_isRegistered;
 		std::string						_nickname;
 		std::string						_username;
+		std::string						_realname;
 		std::vector<std::string>		_channels;
 		bool							_isOperator;
 		char							*_ipAddress;
