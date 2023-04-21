@@ -6,7 +6,7 @@
 	}
 
 	void Channel::addOperator(Client op) {
-		_operators.push_back(op);
+		_operators.push_back(op.getNickname());
 	}
 
 	void Channel::removeClient(Client client)	{
@@ -33,12 +33,21 @@
 
 	void Channel::joinChannel(Client client) {
 		Channel::addClient(client);
-		Channel::addOperator(client);
 	}
 
 	std::string Channel::getTopic() { return (_topic); }
 
-	void Channel::setTopic(std::string topic) { _topic = topic; }
+	void Channel::setTopic(std::string topic, Client client) {
+		std::string response;
+		for (std::vector<std::string>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+			if (it == _operators.end()) {
+				response = "Error: topic can't be changed by a non-operator\r\n";
+				send(client.getSocketFd(), response.c_str(), response.size(), 0);
+				return ;
+			}
+		}
+		_topic = topic;
+	}
 
 	std::string Channel::getName() { return (_name); }
 

@@ -44,7 +44,9 @@ class Server
 		int							checkChannel(std::string channelName, Client &client);
 		void 						createNewChannel(std::string channelName, Client &client, std::string response);
 		void 						mode(std::string channel_name, Client &client);
+		void 						topic(std::vector<std::string> params, Client client);
 
+		bool						isOperator(std::string channelName, Client &client);
 
 	public:
 

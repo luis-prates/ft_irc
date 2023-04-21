@@ -22,5 +22,4 @@ void Server::mode(std::string channel_name, Client &client) {
 		else
 			response = "Channel not found\n";
 	}	
-
 }

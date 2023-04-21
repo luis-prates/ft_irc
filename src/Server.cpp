@@ -276,6 +276,8 @@ int Server::handleCommands(std::string message, Client &client)
 		privmsg(params, client);
 	else if (command == "part")
 		part(params, client);
+	else if (command == "topic")
+		topic(params, client);
 	else if (command == "msg")
 	{
 		// check if the client is registered
@@ -578,4 +580,44 @@ void	Server::user(std::vector<std::string> params, Client &client) {
 	// client.setRealname(params[3]);
 }
 
+	bool	Server::isOperator(std::string channelName, Client &client) {
+		for (std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+			if (it->_name == channelName) {
+				for (std::vector<std::string>::iterator it2 = it->_operators.begin(); it2 != it->_operators.end(); ++it2) {
+					if (*it2 == client.getNickname())
+						return true;
+				}
+			}
+		}
+		return false;
+	}
 
+
+	void Server::topic(std::vector<std::string> params, Client client) {
+		std::string response;
+		if (params.size() >= 1) {
+			for (std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+				if (it->_name == params[0]) {
+					if (params.size() == 1) {
+						response = ":" + this->getHostname() + " 332 " + client.getNickname() + " " + it->_name + " :" + it->_topic + "\r\n";
+						if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+							std::cout << "error sending response\n";
+						return ;
+					}
+					else if (params.size() == 2 && client.isOperator()) {
+						it->_topic = params[1];
+						response = ":" + this->getHostname() + " 332 " + client.getNickname() + " " + it->_name + " :" + it->_topic + "\r\n";
+						if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+							std::cout << "error sending response\n";
+						return ;
+					}
+					else {
+						response = ":" + this->getHostname() + " 461 " + client.getNickname() + " TOPIC :Not enough parameters\r\n";
+						if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+							std::cout << "error sending response\n";
+						return ;
+					}
+				}
+			}
+		}
+	}
