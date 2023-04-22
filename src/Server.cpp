@@ -98,7 +98,7 @@ int Server::run()
 			if (handleClientInput(_clients[i]) == 0)
 			{
 				//Echo back the message that came in
-				std::cout << "Handled client input with successs\n";
+				std::cout << "Handled client input with success\n";
 				//send(clientFd, message.c_str(), message.size(), 0);
 			}
 		}
@@ -199,7 +199,7 @@ int Server::handleClientInput(Client &client)
 		//Close the socket and mark as 0 in list for reuse
 		close(client.getSocketFd());
 		FD_CLR(client.getSocketFd(), &_readFds);
-		client.setSocketFd(0);
+		client.clearClient();
 		for (int j = 0; j < _channels.size(); j++)
 		{
 			if (_channels[j].removeClient(client))
@@ -289,43 +289,6 @@ int Server::handleCommands(std::string message, Client &client)
 		privmsg(params, client);
 	else if (command == "part")
 		part(params, client);
-	else if (command == "msg")
-	{
-		// check if the client is registered
-		if (!client.isRegistered())
-		{
-			response = "Error: you must set a nickname before sending a message\r\n";
-			//TODO: may need to protect this better
-			if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-			return (0);
-		}
-		// check if the client is in a channel
-		if (client.getChannel() == "")
-		{
-			response = "Error: you are not in a channel\r\n";
-			//TODO: may need to protect this better
-			if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-			return (0);
-		}
-		// check if the message is empty
-		if (params.size() == 0)
-		{
-			response = "Error: message cannot be empty\r\n";
-			//TODO: may need to protect this better
-			if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-			return (0);
-		}
-		//TODO check message format
-		response = client.getNickname() + ": " + params[0] + "\r\n";
-		//TODO: may need to protect this better
-		if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-		
-		return (0);
-	}
 	else if (command == "quit")
 	{
 		// check if the client is registered
@@ -468,12 +431,6 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 				for (int i = 1; i < params.size(); i++)
 						msg += params[i] + " ";
 				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
-
-					/** @bug the second " :" is necessary to send messages to all clients
-					 * but the two dots are being appended to the message also
-					 * so the message is being sent as " :message"
-					 * ! I believe this is fixed now
-					*/
 					// Reply to the client to send message to channel
 					response = ":" + client.getNickname() + " PRIVMSG " + itChannel->getName() + " " + msg + "\r\n";
 
@@ -591,8 +548,7 @@ int	Server::pass(std::vector<std::string> params, Client &client)
 			return (EXIT_FAILURE);
 		close(client.getSocketFd());
 		FD_CLR(client.getSocketFd(), &_readFds);
-		client.setSocketFd(0);
-		client.getOutputBuffer().clear();
+		client.clearClient();
 		return (2);
 	}
 	else

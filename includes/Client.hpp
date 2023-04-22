@@ -21,14 +21,13 @@ class Client
 		void								setUsername(const std::string& username) { _username = username; }
 		const std::string&					getRealname() const { return (_realname); }
 		void								setRealname(const std::string& realname) { _realname = realname; }
-		const std::string&					getChannel() const { return (_channels[0]); }
-		void								addChannel(const std::string& channel) { _channels.push_back(channel); }
 		bool								isOperator() const { return (_isOperator); }
 		void								setOperator(bool isOperator) { _isOperator = isOperator; }
 		char*								getIpAddress() const { return (_ipAddress); }
 		void								setIpAddress(char* ipAddress) { _ipAddress = ipAddress; }
 		u_int16_t							getPort() const { return (_port); }
 		void								setPort(u_int16_t port) { _port = port; }
+		void								clearClient();
 
 	private:
 		int								_socketFd;
@@ -38,7 +37,6 @@ class Client
 		std::string						_nickname;
 		std::string						_username;
 		std::string						_realname;
-		std::vector<std::string>		_channels;
 		bool							_isOperator;
 		char							*_ipAddress;
 		u_int16_t						_port;

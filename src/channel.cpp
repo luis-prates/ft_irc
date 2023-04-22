@@ -119,7 +119,7 @@ void Server::createNewChannel(std::string channelName, Client &client, std::stri
 	std::cout << "Channel " << newChannel.getName() << " created\n";
 	newChannel.joinChannel(client); // define the client and operator
 	std::cout << "Client " << client.getNickname() << " joined channel " << newChannel.getName() << "\n";
-	client.addChannel(channelName);
+	//client.addChannel(channelName);
 }
 
 // Check if channel already exists
@@ -128,7 +128,7 @@ int	Server::checkChannel(std::string channelName, Client &client){
 	for(it = Server::_channels.begin(); it != Server::_channels.end(); ++it) {
 		if (it->_name == channelName)	{
 			it->addClient(client);
-			client.addChannel(channelName);
+			//client.addChannel(channelName);
 			return (1);
 		}
 	}
