@@ -500,7 +500,7 @@ int	Server::notice(std::vector<std::string> params, Client &client)
 				for (int i = 1; i < params.size(); i++)
 					response += params[i] + " ";
 				response.erase(response.size() - 1);
-				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " :" + response + "\r\n";
+				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " " + response + "\r\n";
 				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
 					// Don't send the response to the sender
 					if (client.getNickname() != itClient->getNickname())
