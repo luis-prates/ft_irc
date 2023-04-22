@@ -21,7 +21,6 @@ public:
 
 	explicit Channel(std::string name, Client client): _name(name)
 	{
-		_clients.push_back(client);
 		_operators.push_back(client);
 		_topic = "No topic is set";
 		_mode.push_back('n');
@@ -34,7 +33,6 @@ public:
 	void		addOperator(Client op);
 	bool		removeClient(Client client);
 	bool		removeOp(Client op);
-	bool		kickUser(Client victim);
 	std::string	getTopic();
 	void		setTopic(std::string topic);
 	std::string	getName();

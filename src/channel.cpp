@@ -29,15 +29,6 @@
 		return (false);
 	}
 
-	bool Channel::kickUser(Client victim)
-	{
-		bool kick = false;
-		kick = removeOp(victim);
-		if (kick == false)
-			kick = removeClient(victim);
-		return kick;
-	}
-
 	std::string Channel::getTopic() { return (_topic); }
 
 	void Channel::setTopic(std::string topic) { _topic = topic; }

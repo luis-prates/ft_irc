@@ -308,6 +308,8 @@ int Server::handleCommands(std::string message, Client &client)
 	}
 	else if (command == "pass")
 		return (pass(params, client));
+	//else if (command == "kick")
+	//	return (kick(params[0], client));
 	else
 		return (invalidCommand(command, params, client));
 	return (EXIT_SUCCESS);
@@ -389,19 +391,25 @@ Channel* Server::getChannel(std::string channelName) {
 void Server::who(std::vector<std::string> params, Client &client) {
 	std::string responseNames;
 	std::string responseWho;
-	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
-		std::cout << "Channel: " << it->getName() << "\n";
-		if (it->_name == params[0])	{
-			for (std::vector<Client>::iterator it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2) {
+	for(std::vector<Channel>::iterator itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
+		std::cout << "Channel: " << itChannel->getName() << "\n";
+		if (itChannel->_name == params[0])	{
+			for (std::vector<Client>::iterator itOperator = itChannel->_operators.begin(); itOperator != itChannel->_operators.end(); ++itOperator) {
 				// :hostname 353 nickname = #channel :nickname nickname (can be more than one here or sent in multiple messages)
-				responseNames += ":" + this->getHostname() + " 353 " + client.getNickname() + " = " + it->getName() + " " + it2->getNickname() + "\r\n";
+				responseNames += ":" + this->getHostname() + " 353 " + client.getNickname() + " = " + itChannel->getName() + " :@" + itOperator->getNickname() + "\r\n";
 				// :hostname 354 nickname #channel nickname userIpAddress hostname nickname channelModes hopcount(0 for single server) :realname
-				responseWho += ":" + this->getHostname() + " 354 " + client.getNickname() + " 152 " + it->getName() + " " + it2->getUsername() + " " + it2->getIpAddress() + " " + this->getHostname() + " " + it2->getNickname() + " H 0 " + it2->getRealname() + "\r\n";
+				responseWho += ":" + this->getHostname() + " 354 " + client.getNickname() + " 152 " + itChannel->getName() + " " + itOperator->getUsername() + " " + itOperator->getIpAddress() + " " + this->getHostname() + " " + itOperator->getNickname() + " H@ 0 " + itOperator->getRealname() + "\r\n";
+			}
+			for (std::vector<Client>::iterator itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
+				// :hostname 353 nickname = #channel :nickname nickname (can be more than one here or sent in multiple messages)
+				responseNames += ":" + this->getHostname() + " 353 " + client.getNickname() + " = " + itChannel->getName() + " " + itClient->getNickname() + "\r\n";
+				// :hostname 354 nickname #channel nickname userIpAddress hostname nickname channelModes hopcount(0 for single server) :realname
+				responseWho += ":" + this->getHostname() + " 354 " + client.getNickname() + " 152 " + itChannel->getName() + " " + itClient->getUsername() + " " + itClient->getIpAddress() + " " + this->getHostname() + " " + itClient->getNickname() + " H 0 " + itClient->getRealname() + "\r\n";
 			}
 			// :hostname 366 nickname #channel :End of /NAMES list.
-			responseNames += ":" + this->getHostname() + " 366 " + client.getNickname() + " " + it->getName() + " :End of /NAMES list.\r\n";
+			responseNames += ":" + this->getHostname() + " 366 " + client.getNickname() + " " + itChannel->getName() + " :End of /NAMES list.\r\n";
 			// :hostname 315 nickname #channel :End of /WHO list.
-			responseWho += ":" + this->getHostname() + " 315 " + client.getNickname() + " " + it->getName() + " :End of /WHO list.\r\n";
+			responseWho += ":" + this->getHostname() + " 315 " + client.getNickname() + " " + itChannel->getName() + " :End of /WHO list.\r\n";
 			// concatenate the two strings
 			responseNames += responseWho;
 			//response += ":" + it->getName() + " 352 " + client.getNickname() + " " + it->_name + " :End of WHO list.\r\n";
@@ -559,6 +567,14 @@ int	Server::pass(std::vector<std::string> params, Client &client)
 	}
 }
 
+void Server::kick(std::string channel_name, Client &client)
+{
+	bool kick = false;
+	/*kick = removeOp(victim);
+	if (kick == false)
+		kick = removeClient(victim);*/
+}
+
 int Server::invalidCommand(std::string command, std::vector<std::string> params, Client &client)
 {
 	std::string	response;
@@ -587,13 +603,17 @@ void Server::rpl_Welcome(const Client &client)
 }
 
 // Create a new channel
-void Server::createNewChannel(std::string channelName, Client &client, std::string response) {
-	// Create a new Channel, add it to the list of channels and add the client to the channel
+void Server::createNewChannel(std::string channelName, Client &client) {
+
+	std::string	response;	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+			std::cout << "error sending response\n";
 	Channel newChannel(channelName, client);
 	Server::_channels.push_back(newChannel);
 	std::cout << "Channel " << newChannel.getName() << " created\n";
 	//newChannel.joinChannel(client); // define the client and operator
-	newChannel.addOperator(client);
+	response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " MODE :" + channelName + " +o " + client.getNickname() + "\r\n";
+	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
+			std::cout << "error sending response\n";
 	std::cout << "Client " << client.getNickname() << " joined channel " << newChannel.getName() << "\n";
 	//client.addChannel(channelName);
 }
@@ -668,7 +688,7 @@ int Server::joinChannel( std::vector<std::string> params, Client &client, std::s
 */
 	if (params[0][0] == '#') {
 		if (!checkChannel(channelName, client))
-			createNewChannel(channelName, client, response);
+			createNewChannel(channelName, client);
 		rpl_Join(client, *Server::getChannel(channelName), response);
 	}
 	else  {
