@@ -33,13 +33,14 @@ public:
 	void		addClient(Client client);
 	void		addOperator(Client op);
 	bool		removeClient(Client client);
-	void		removeOp(Client op);
-	void		joinChannel(Client client);
+	bool		removeOp(Client op);
+	bool		kickUser(Client victim);
 	std::string	getTopic();
 	void		setTopic(std::string topic);
 	std::string	getName();
 	std::string	getMode();
 	bool		isClientInChannel(Client client);
+	bool		isOperatorInChannel(Client client);
 };
 
 
