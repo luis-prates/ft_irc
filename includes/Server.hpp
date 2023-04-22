@@ -41,6 +41,8 @@ class Server
 		void						part(std::vector<std::string> params, Client &client);
 		void						quit(std::vector<std::string> params, Client &client);
 		void						user(std::vector<std::string> params, Client &client);
+		int							pass(std::vector<std::string> params, Client &client);
+		int							invalidCommand(std::string command, std::vector<std::string> params, Client &client);
 
 		int							checkChannel(std::string channelName, Client &client);
 		void 						createNewChannel(std::string channelName, Client &client, std::string response);

@@ -29,7 +29,7 @@ class Client
 		void								setIpAddress(char* ipAddress) { _ipAddress = ipAddress; }
 		u_int16_t							getPort() const { return (_port); }
 		void								setPort(u_int16_t port) { _port = port; }
-                    
+
 	private:
 		int								_socketFd;
 		std::string						_inputBuffer;

@@ -238,10 +238,6 @@ int Server::handleClientInput(Client &client)
 						std::cout << "Unknown error\n";
 						break;
 					case 2:
-						close(client.getSocketFd());
-						FD_CLR(client.getSocketFd(), &_readFds);
-						client.setSocketFd(0);
-						client.getOutputBuffer().clear();
 						return (EXIT_FAILURE);
 				}
 			}
@@ -348,39 +344,9 @@ int Server::handleCommands(std::string message, Client &client)
 		return 1;
 	}
 	else if (command == "pass")
-	{
-		// check if the client is registered
-		if (client.isRegistered())
-		{
-			response = ":" + this->getHostname() +" 462 " + client.getNickname() + " :You may not reregister\r\n";
-			if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-		}
-		// check if the password is correct
-		else if (params[0] != _password)
-		{
-			// asterisk is used to replace any nickname
-			response = ":" + this->getHostname() +" 464 *" + " :Incorrect password\r\n";
-			if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-			// TODO needs to close connection
-			// TODO and check how to break from the command loop
-			return (2);
-		}
-		else
-		{
-			response = "Password accepted\r\n";
-			std::cout << "Password accepted\n";
-		}
-	}
+		return (pass(params, client));
 	else
-	{
-		response = "Error: invalid command\r\n";
-		//TODO: may need to protect this better
-		if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-		return (-1);
-	}
+		return (invalidCommand(command, params, client));
 	return (EXIT_SUCCESS);
 }
 
@@ -602,6 +568,54 @@ void	Server::user(std::vector<std::string> params, Client &client) {
 		client.setRegistered(true);
 		this->rpl_Welcome(client);
 	}
+}
+
+int	Server::pass(std::vector<std::string> params, Client &client)
+{
+	std::string	response;
+
+	// check if the client is registered
+	if (client.isRegistered())
+	{
+		response = ":" + this->getHostname() +" 462 " + client.getNickname() + " :You may not reregister\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
+	}
+	// check if the password is correct
+	else if (params[0] != _password)
+	{
+		// asterisk is used to replace any nickname
+		response = ":" + this->getHostname() +" 464 *" + " :Incorrect password\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		close(client.getSocketFd());
+		FD_CLR(client.getSocketFd(), &_readFds);
+		client.setSocketFd(0);
+		client.getOutputBuffer().clear();
+		return (2);
+	}
+	else
+	{
+		response = "Password accepted\r\n";
+		std::cout << "Password accepted\n";
+		return (EXIT_SUCCESS);
+	}
+}
+
+int Server::invalidCommand(std::string command, std::vector<std::string> params, Client &client)
+{
+	std::string	response;
+	std::transform(command.begin(), command.end(), command.begin(), ::toupper);
+
+	if (client.isRegistered())
+		response = ":" + this->getHostname() + " 421 " + client.getNickname() + " " + command + " :Unknown command\r\n";
+	else
+		response = ":" + this->getHostname() + " 421 * " + command + " :Unknown command\r\n";
+	//TODO: may need to protect this better
+	if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+	return (-1);
 }
 
 void Server::rpl_Welcome(const Client &client)
