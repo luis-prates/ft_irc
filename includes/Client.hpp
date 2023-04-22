@@ -7,26 +7,26 @@
 class Client
 {
 	public:
-		explicit							Client(int socketFd) : _socketFd(socketFd), _isRegistered(false) {}
+		explicit							Client(int socketFd);
 		
-		int									getSocketFd() const { return (_socketFd); }
-		void								setSocketFd(int socketFd) { _socketFd = socketFd; }
-		std::string&						getInputBuffer() { return (_inputBuffer); }
-		std::string&						getOutputBuffer() { return (_outputBuffer); }
-		bool								isRegistered() const { return (_isRegistered); }
-		void								setRegistered(bool registered) { _isRegistered = registered; }
-		const std::string&					getNickname() const { return (_nickname); }
-		void								setNickname(const std::string& nickname) { _nickname = nickname; }
-		const std::string&					getUsername() const { return (_username); }
-		void								setUsername(const std::string& username) { _username = username; }
-		const std::string&					getRealname() const { return (_realname); }
-		void								setRealname(const std::string& realname) { _realname = realname; }
+		int									getSocketFd() const;
+		void								setSocketFd(int socketFd);
+		std::string&						getInputBuffer();
+		std::string&						getOutputBuffer();
+		bool								isRegistered() const;
+		void								setRegistered(bool registered);
+		const std::string&					getNickname() const;
+		void								setNickname(const std::string& nickname);
+		const std::string&					getUsername() const;
+		void								setUsername(const std::string& username);
+		const std::string&					getRealname() const;
+		void								setRealname(const std::string& realname);
 		bool								isOperator() const { return (_isOperator); }
 		void								setOperator(bool isOperator) { _isOperator = isOperator; }
-		char*								getIpAddress() const { return (_ipAddress); }
-		void								setIpAddress(char* ipAddress) { _ipAddress = ipAddress; }
-		u_int16_t							getPort() const { return (_port); }
-		void								setPort(u_int16_t port) { _port = port; }
+		char*								getIpAddress() const;
+		void								setIpAddress(char* ipAddress);
+		u_int16_t							getPort() const;
+		void								setPort(u_int16_t port);
 		void								clearClient();
 
 	private:
