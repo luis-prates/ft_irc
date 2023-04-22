@@ -287,6 +287,8 @@ int Server::handleCommands(std::string message, Client &client)
 		who(params, client);
 	else if (command == "privmsg")
 		privmsg(params, client);
+	else if (command == "notice")
+		notice(params, client);
 	else if (command == "part")
 		part(params, client);
 	else if (command == "quit")
@@ -424,16 +426,14 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 
 	if (params[0].at(0) == '#') {
 		for(itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
-			/** @bug the + '\r' is a patch that may not work in all ocasions
-			 * the comparison is not working as expected */
 			if (itChannel->_name == params[0])	{
 				// message to channel
 				for (int i = 1; i < params.size(); i++)
 						msg += params[i] + " ";
+				msg.erase(msg.size() - 1);
+				// Reply to the client to send message to channel
+				response = ":" + client.getNickname() + " PRIVMSG " + itChannel->getName() + " " + msg + "\r\n";
 				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
-					// Reply to the client to send message to channel
-					response = ":" + client.getNickname() + " PRIVMSG " + itChannel->getName() + " " + msg + "\r\n";
-
 					// Don't send the response to the sender
 					if (client.getNickname() != itClient->getNickname())
 						if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
@@ -467,6 +467,57 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 				return ;
 		}
 	}
+}
+
+void Server::notice(std::vector<std::string> params, Client &client)
+{
+	std::string response;
+	std::vector<Client>::iterator itClient;
+	std::vector<Channel>::iterator itChannel;
+	
+	if (params.size() < 2) {
+		if (client.isRegistered())
+			response = ":" + this->getHostname() + " 461 " + client.getNickname() + " NOTICE :Not enough parameters\r\n";
+		else
+			response = ":" + this->getHostname() + " 461 *" + " NOTICE :Not enough parameters\r\n";
+	}
+	if (client.isRegistered()) {
+		if (params[0].at(0) == '#') {
+			itChannel = getChannelIterator(params[0]);
+			if (itChannel != _channels.end() && itChannel->isClientInChannel(client)) {
+				for (int i = 1; i < params.size(); i++)
+					response += params[i] + " ";
+				response.erase(response.size() - 1);
+				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " :" + response + "\r\n";
+				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
+					// Don't send the response to the sender
+					if (client.getNickname() != itClient->getNickname())
+						if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
+							std::cout << "error sending response\n";
+				}
+				return ;
+			}
+			// message to channel
+		}
+		else {
+			// message to user
+			itClient = getClientIterator(params[0]);
+			if (itClient != _clients.end()) {
+				for (int i = 1; i < params.size(); i++)
+					response += params[i] + " ";
+				response.erase(response.size() - 1);
+				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " " + response + "\r\n";
+				if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
+					std::cout << "error sending response\n";
+				return ;
+			}
+		}
+	}
+	else {
+		response = ":" + this->getHostname() + " 451 " + client.getNickname() + " :You have not registered\r\n";
+	}
+	if (sendMessage(client.getSocketFd(), response) == -1)
+		return ;
 }
 
 void	Server::part(std::vector<std::string> params, Client &client) {
@@ -572,6 +623,38 @@ int Server::invalidCommand(std::string command, std::vector<std::string> params,
 	if (sendMessage(client.getSocketFd(), response) == -1)
 			return (EXIT_FAILURE);
 	return (-1);
+}
+
+bool Server::checkChannelExists(std::string channelName)
+{
+	for (std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+		if (it->_name == channelName)
+			return (true);
+	return (false);
+}
+
+bool Server::checkClientExists(std::string nickname)
+{
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+		if (it->getNickname() == nickname)
+			return (true);
+	return (false);
+}
+
+std::vector<Client>::iterator Server::getClientIterator(std::string nickname)
+{
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+		if (it->getNickname() == nickname)
+			return (it);
+	return (_clients.end());
+}
+
+std::vector<Channel>::iterator Server::getChannelIterator(std::string channelName)
+{
+	for (std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+		if (it->_name == channelName)
+			return (it);
+	return (_channels.end());
 }
 
 void Server::rpl_Welcome(const Client &client)
