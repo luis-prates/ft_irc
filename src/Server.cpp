@@ -583,11 +583,15 @@ void	Server::user(std::vector<std::string> params, Client &client) {
 	std::string	realName;
 	std::string	response;
 
-	if (params.size() < 4) {
+	if (client.getNickname().empty()) {
+		response = ":" + this->getHostname() + " 431 * :No nickname given\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return ;
+	}
+	else if (params.size() < 4) {
 		response = ":" + this->getHostname() + " 461 " + client.getNickname() + " USER :Not enough parameters\r\n";
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-			std::cout << "error sending response\n";
-		return ;
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return ;
 	}
 	else {
 		client.setUsername(params[0]);
@@ -607,7 +611,7 @@ void Server::rpl_Welcome(const Client &client)
 	response = ":" + this->getHostname() + " 001 " + client.getNickname() + " :" + WELCOME + " " + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + "\r\n";
 	response += ":" + this->getHostname() + " 002 " + client.getNickname() + " :Your host is " + this->getHostname() + ", running version 0.6\r\n";
 	response += ":" + this->getHostname() + " 003 " + client.getNickname() + " :This server was created sometime in the near future\r\n";
-	response += ":" + this->getHostname() + " 004 " + client.getNickname() + " " + this->getHostname() + " 0.6 ao bcehiIklmnoOpqrstv\r\n";
+	response += ":" + this->getHostname() + " 004 " + client.getNickname() + " " + this->getHostname() + " 0.6 insert channel modes\r\n";
 	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
 		std::cout << "error sending response\n";
 }
