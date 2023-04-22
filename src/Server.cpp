@@ -18,7 +18,7 @@ Server::~Server()
 	
 }
 
-int Server::setup_server(int port)
+int	Server::setup_server(int port)
 {
 	int sockOpt = 1;
 
@@ -70,7 +70,7 @@ int Server::setup_server(int port)
 	return (0);
 }
 
-int Server::run()
+int	Server::run()
 {
 	fdResetNSet(_clients);
 
@@ -106,7 +106,7 @@ int Server::run()
 	return (EXIT_SUCCESS);
 }
 
-int Server::clear_fd_set()
+int	Server::clear_fd_set()
 {
 	// Clean up
 	for (int fd = 0; fd <= _maxFd; fd++)
@@ -121,7 +121,7 @@ int Server::clear_fd_set()
 }
 
 
-int Server::fdResetNSet(std::vector<Client> &clients)
+int	Server::fdResetNSet(std::vector<Client> &clients)
 {
 	int	clientFd;
 
@@ -148,8 +148,7 @@ int Server::fdResetNSet(std::vector<Client> &clients)
 	return (0);
 }
 
-// TODO: need to check in case a client get killed
-int Server::handleNewConnection(std::vector<Client> &clients)
+int	Server::handleNewConnection(std::vector<Client> &clients)
 {
 	t_socket tmpSocket;
 	tmpSocket.addrlen = sizeof(tmpSocket.address);
@@ -183,7 +182,7 @@ int Server::handleNewConnection(std::vector<Client> &clients)
 	return (0);
 }
 
-int Server::handleClientInput(Client &client)
+int	Server::handleClientInput(Client &client)
 {
 	int returnValue;
 	int valread;
@@ -224,8 +223,6 @@ int Server::handleClientInput(Client &client)
 				commands[k].erase(std::find(commands[k].begin(), commands[k].end(), '\r'), commands[k].end());
 				std::cout << "Command: " << commands[k] << std::endl;
 				returnValue = handleCommands(commands[k], client);
-				// TODO: add a way to break this loop
-				// TODO: when password is wrong
 				switch (returnValue)
 				{
 					case -1:
@@ -255,7 +252,7 @@ int Server::handleClientInput(Client &client)
 
 // needs refactoring and proper handling of commands
 // used for testing with HexChat client
-int Server::handleCommands(std::string message, Client &client)
+int	Server::handleCommands(std::string message, Client &client)
 {
 	std::string command;
 	std::vector<std::string> params;
@@ -280,7 +277,7 @@ int Server::handleCommands(std::string message, Client &client)
 		user(params, client);
 	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
 	else if (command == "join")
-		return (joinChannel(params, client, response));
+		return (joinChannel(params, client));
 	else if (command == "mode")
 		mode(params[0], client);
 	else if (command == "who")
@@ -317,7 +314,7 @@ int Server::handleCommands(std::string message, Client &client)
 	return (EXIT_SUCCESS);
 }
 
-std::vector<std::string> Server::split(std::string message, char del)
+std::vector<std::string>	Server::split(std::string message, char del)
 {
 	// variable to store token obtained from the original
 	// string
@@ -338,7 +335,7 @@ std::vector<std::string> Server::split(std::string message, char del)
 	return (v);
 }
 
-void Server::handleNick(std::vector<std::string> params, Client &client)
+int	Server::handleNick(std::vector<std::string> params, Client &client)
 {
 	std::string	response;
 	std::string	prevNickname;
@@ -348,8 +345,8 @@ void Server::handleNick(std::vector<std::string> params, Client &client)
 	if (params.size() != 1)
 	{
 		response = "Error: nickname cannot contain spaces\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return ;
+		sendMessage(client.getSocketFd(), response);
+		return (EXIT_FAILURE);
 	}
 	prevNickname = client.getNickname();
 	client.setNickname(params[0]);
@@ -357,26 +354,28 @@ void Server::handleNick(std::vector<std::string> params, Client &client)
 		response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " NICK :" + params[0] + "\r\n";
 	else
 		response = ":" + prevNickname + "!" + client.getUsername() + "@" + client.getIpAddress() + " NICK :" + params[0] + "\r\n";
-	//TODO: may need to protect this better
-	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-			std::cout << "error sending response\n";
-	return ;
+	if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
 
 
 // Reply to the client to confirm the join
-void Server::rpl_Join(Client client, Channel newChannel, std::string response) {
+int	Server::rpl_Join(Client client, Channel newChannel) {
+	std::string	response;
+
 	response = ":" + client.getNickname() + " JOIN " + newChannel.getName() + "\r\n";
-	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-		std::cout << "error sending response\n";
+	if (sendMessage(client.getSocketFd(), response) == -1)
+		return (EXIT_FAILURE);
 	// RPL_TOPIC
 	if (newChannel.getTopic() != "")
 		response = newChannel.getName() + " :" + newChannel.getTopic() + "\r\n";
 	else
 		response = newChannel.getName() + " :No topic is set\r\n";
-	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-		std::cout << "error sending response\n";
+	if (sendMessage(client.getSocketFd(), response) == -1)
+		return (EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
 Channel* Server::getChannel(std::string channelName) {
@@ -385,12 +384,10 @@ Channel* Server::getChannel(std::string channelName) {
 			return &(*it);
 		}
 	}
-	return 0;
+	return (NULL);
 }
 
-// Not working as expected... thought that if I gave the correct reply the hexchat would list my user in the channel
-//in the right side bar... but it doesn't
-void Server::who(std::vector<std::string> params, Client &client) {
+int	Server::who(std::vector<std::string> params, Client &client) {
 	std::string responseNames;
 	std::string responseWho;
 	for(std::vector<Channel>::iterator itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
@@ -415,17 +412,14 @@ void Server::who(std::vector<std::string> params, Client &client) {
 			// concatenate the two strings
 			responseNames += responseWho;
 			//response += ":" + it->getName() + " 352 " + client.getNickname() + " " + it->_name + " :End of WHO list.\r\n";
-			if (send(client.getSocketFd(), responseNames.c_str(), responseNames.size(), 0) == -1)
-				std::cout << "error sending response\n";
+			if (sendMessage(client.getSocketFd(), responseNames) == -1)
+				return (EXIT_FAILURE);
 		}
 	}
+	return (EXIT_SUCCESS);
 }
 
-
-/** Still needs to be tested with more than one channel 
- * 	PRIVMSG messages to other users outside the channel is not implemented
-*/
-void Server::privmsg(std::vector<std::string> params, Client &client) {
+int	Server::privmsg(std::vector<std::string> params, Client &client) {
 	// check if the channel exists
 	std::string response;
 	std::string msg;
@@ -444,16 +438,23 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
 					// Don't send the response to the sender
 					if (client.getNickname() != itClient->getNickname())
-						if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
-							std::cout << "error sending response\n";
+						if (sendMessage(itClient->getSocketFd(), response) == -1)
+							return (EXIT_FAILURE);
 				}
-				break;
+				for (itClient = itChannel->_operators.begin(); itClient != itChannel->_operators.end(); ++itClient) {
+					// Don't send the response to the sender
+					if (client.getNickname() != itClient->getNickname())
+						if (sendMessage(itClient->getSocketFd(), response) == -1)
+							return (EXIT_FAILURE);
+				}
+				return (EXIT_SUCCESS);
 			}
 		}
 		if (itChannel == _channels.end()) {
 			response = ":" + this->getHostname() + " 403 " + client.getNickname() + " " + params[0] + " :No such channel\r\n";
 			if (sendMessage(client.getSocketFd(), response) == -1)
-				return ;
+				return (EXIT_FAILURE);
+			return (EXIT_SUCCESS);
 		}
 	}
 	else {
@@ -464,20 +465,22 @@ void Server::privmsg(std::vector<std::string> params, Client &client) {
 					msg += params[i] + " ";
 				// Reply to the client to send message to user
 				response = ":" + client.getNickname() + " PRIVMSG " + itClient->getNickname() + " " + msg + "\r\n";
-				if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
-					std::cout << "error sending response\n";
-				break;
+				if (sendMessage(itClient->getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
 			}
 		}
 		if (itClient == _clients.end()) {
 			response = ":" + this->getHostname() + " 401 " + client.getNickname() + " " + params[0] + " :No such nick\r\n";
 			if (sendMessage(client.getSocketFd(), response) == -1)
-				return ;
+				return (EXIT_FAILURE);
 		}
+		return (EXIT_SUCCESS);
 	}
+	return (EXIT_SUCCESS);
 }
 
-void Server::notice(std::vector<std::string> params, Client &client)
+int	Server::notice(std::vector<std::string> params, Client &client)
 {
 	std::string response;
 	std::vector<Client>::iterator itClient;
@@ -491,6 +494,7 @@ void Server::notice(std::vector<std::string> params, Client &client)
 	}
 	if (client.isRegistered()) {
 		if (params[0].at(0) == '#') {
+			// message to channel
 			itChannel = getChannelIterator(params[0]);
 			if (itChannel != _channels.end() && itChannel->isClientInChannel(client)) {
 				for (int i = 1; i < params.size(); i++)
@@ -500,12 +504,17 @@ void Server::notice(std::vector<std::string> params, Client &client)
 				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
 					// Don't send the response to the sender
 					if (client.getNickname() != itClient->getNickname())
-						if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
-							std::cout << "error sending response\n";
+						if (sendMessage(itClient->getSocketFd(), response) == -1)
+							return (EXIT_FAILURE);
 				}
-				return ;
+				for (itClient = itChannel->_operators.begin(); itClient != itChannel->_operators.end(); ++itClient) {
+					// Don't send the response to the sender
+					if (client.getNickname() != itClient->getNickname())
+						if (sendMessage(itClient->getSocketFd(), response) == -1)
+							return (EXIT_FAILURE);
+				}
+				return (EXIT_SUCCESS);
 			}
-			// message to channel
 		}
 		else {
 			// message to user
@@ -515,9 +524,9 @@ void Server::notice(std::vector<std::string> params, Client &client)
 					response += params[i] + " ";
 				response.erase(response.size() - 1);
 				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " " + response + "\r\n";
-				if (send(itClient->getSocketFd(), response.c_str(), response.size(), 0) == -1)
-					std::cout << "error sending response\n";
-				return ;
+				if (sendMessage(itClient->getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
 			}
 		}
 	}
@@ -525,10 +534,11 @@ void Server::notice(std::vector<std::string> params, Client &client)
 		response = ":" + this->getHostname() + " 451 " + client.getNickname() + " :You have not registered\r\n";
 	}
 	if (sendMessage(client.getSocketFd(), response) == -1)
-		return ;
+		return (EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
-void	Server::part(std::vector<std::string> params, Client &client) {
+int	Server::part(std::vector<std::string> params, Client &client) {
 	std::string response;
 	std::vector<Client>::iterator it2;
 
@@ -540,40 +550,48 @@ void	Server::part(std::vector<std::string> params, Client &client) {
 				if (client.getNickname() == it2->getNickname())
 					break;
 
-			if (it2 == it->_clients.end())
+			if (it2 == it->_clients.end()) {
+				for (it2 = it->_operators.begin(); it2 != it->_operators.end(); ++it2)
+					if (client.getNickname() == it2->getNickname())
+						break;
+			}
+			if (it2 == it->_operators.end())
 				response = ":" + this->getHostname() + " 442 " + it2->getNickname() + " " + it->getName() + " :You're not on that channel\r\n";
 			else
 				// Reply to the client to confirm the part
 				response = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + it->getName() + "\r\n";
 			if (sendMessage(client.getSocketFd(), response) == -1)
-				return ;
+				return (EXIT_FAILURE);
 			if (response.find("PART") != std::string::npos) {
-				it->_clients.erase(it2);
-				if (it->_clients.empty())
+				if (it->isClientInChannel(client))
+					it->_clients.erase(it2);
+				else
+					it->_operators.erase(it2);
+				if (it->_clients.empty() && it->_operators.empty())
 					_channels.erase(it);
 			}
-			return ;
+			return (EXIT_SUCCESS);
 		}
 	}
 	response = ":" + this->getHostname() + " 403 " + client.getNickname() + " " + params[0] + " :No such channel\r\n";
-	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-		std::cout << "error sending response\n";
-	return ;
+	if (sendMessage(client.getSocketFd(), response) == -1)
+		return (EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
-void	Server::user(std::vector<std::string> params, Client &client) {
+int	Server::user(std::vector<std::string> params, Client &client) {
 	std::string	realName;
 	std::string	response;
 
 	if (client.getNickname().empty()) {
 		response = ":" + this->getHostname() + " 431 * :No nickname given\r\n";
 		if (sendMessage(client.getSocketFd(), response) == -1)
-			return ;
+			return (EXIT_FAILURE);
 	}
 	else if (params.size() < 4) {
 		response = ":" + this->getHostname() + " 461 " + client.getNickname() + " USER :Not enough parameters\r\n";
 		if (sendMessage(client.getSocketFd(), response) == -1)
-			return ;
+			return (EXIT_FAILURE);
 	}
 	else {
 		client.setUsername(params[0]);
@@ -584,6 +602,7 @@ void	Server::user(std::vector<std::string> params, Client &client) {
 		client.setRegistered(true);
 		this->rpl_Welcome(client);
 	}
+	return (EXIT_SUCCESS);
 }
 
 int	Server::pass(std::vector<std::string> params, Client &client)
@@ -612,13 +631,12 @@ int	Server::pass(std::vector<std::string> params, Client &client)
 	}
 	else
 	{
-		response = "Password accepted\r\n";
 		std::cout << "Password accepted\n";
 		return (EXIT_SUCCESS);
 	}
 }
 
-void Server::kick(std::string channel_name, Client &client)
+void	Server::kick(std::string channel_name, Client &client)
 {
 	bool kick = false;
 	/*kick = removeOp(victim);
@@ -626,7 +644,7 @@ void Server::kick(std::string channel_name, Client &client)
 		kick = removeClient(victim);*/
 }
 
-int Server::invalidCommand(std::string command, std::vector<std::string> params, Client &client)
+int	Server::invalidCommand(std::string command, std::vector<std::string> params, Client &client)
 {
 	std::string	response;
 	std::transform(command.begin(), command.end(), command.begin(), ::toupper);
@@ -635,13 +653,12 @@ int Server::invalidCommand(std::string command, std::vector<std::string> params,
 		response = ":" + this->getHostname() + " 421 " + client.getNickname() + " " + command + " :Unknown command\r\n";
 	else
 		response = ":" + this->getHostname() + " 421 * " + command + " :Unknown command\r\n";
-	//TODO: may need to protect this better
 	if (sendMessage(client.getSocketFd(), response) == -1)
 			return (EXIT_FAILURE);
 	return (-1);
 }
 
-bool Server::checkChannelExists(std::string channelName)
+bool	Server::checkChannelExists(std::string channelName)
 {
 	for (std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it)
 		if (it->_name == channelName)
@@ -649,7 +666,7 @@ bool Server::checkChannelExists(std::string channelName)
 	return (false);
 }
 
-bool Server::checkClientExists(std::string nickname)
+bool	Server::checkClientExists(std::string nickname)
 {
 	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
 		if (it->getNickname() == nickname)
@@ -657,7 +674,7 @@ bool Server::checkClientExists(std::string nickname)
 	return (false);
 }
 
-std::vector<Client>::iterator Server::getClientIterator(std::string nickname)
+std::vector<Client>::iterator	Server::getClientIterator(std::string nickname)
 {
 	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
 		if (it->getNickname() == nickname)
@@ -665,7 +682,7 @@ std::vector<Client>::iterator Server::getClientIterator(std::string nickname)
 	return (_clients.end());
 }
 
-std::vector<Channel>::iterator Server::getChannelIterator(std::string channelName)
+std::vector<Channel>::iterator	Server::getChannelIterator(std::string channelName)
 {
 	for (std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it)
 		if (it->_name == channelName)
@@ -673,7 +690,7 @@ std::vector<Channel>::iterator Server::getChannelIterator(std::string channelNam
 	return (_channels.end());
 }
 
-void Server::rpl_Welcome(const Client &client)
+int	Server::rpl_Welcome(const Client &client)
 {
 	std::string	response;
 
@@ -681,40 +698,39 @@ void Server::rpl_Welcome(const Client &client)
 	response += ":" + this->getHostname() + " 002 " + client.getNickname() + " :Your host is " + this->getHostname() + ", running version 0.6\r\n";
 	response += ":" + this->getHostname() + " 003 " + client.getNickname() + " :This server was created sometime in the near future\r\n";
 	response += ":" + this->getHostname() + " 004 " + client.getNickname() + " " + this->getHostname() + " 0.6 insert channel modes\r\n";
-	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-		std::cout << "error sending response\n";
+	if (sendMessage(client.getSocketFd(), response) == -1)
+		return (EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
 // Create a new channel
-void Server::createNewChannel(std::string channelName, Client &client) {
+int	Server::createNewChannel(std::string channelName, Client &client) {
+	std::string	response;
 
-	std::string	response;	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-			std::cout << "error sending response\n";
+	if (sendMessage(client.getSocketFd(), response) == -1)
+		return (EXIT_FAILURE);
 	Channel newChannel(channelName, client);
 	Server::_channels.push_back(newChannel);
 	std::cout << "Channel " << newChannel.getName() << " created\n";
-	//newChannel.joinChannel(client); // define the client and operator
 	response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " MODE :" + channelName + " +o " + client.getNickname() + "\r\n";
-	if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-			std::cout << "error sending response\n";
-	std::cout << "Client " << client.getNickname() << " joined channel " << newChannel.getName() << "\n";
-	//client.addChannel(channelName);
+	if (sendMessage(client.getSocketFd(), response) == -1)
+		return (EXIT_FAILURE);
+	return (EXIT_SUCCESS);
 }
 
 // Check if channel already exists
-int	Server::checkChannel(std::string channelName, Client &client){
+bool	Server::checkChannel(std::string channelName, Client &client){
 	std::vector<Channel>::iterator it;
 	for(it = Server::_channels.begin(); it != Server::_channels.end(); ++it) {
 		if (it->_name == channelName)	{
 			it->addClient(client);
-			//client.addChannel(channelName);
-			return (1);
+			return (true);
 		}
 	}
-	return (0);
+	return (false);
 }
 
-int Server::joinChannel( std::vector<std::string> params, Client &client, std::string &response) {
+int Server::joinChannel( std::vector<std::string> params, Client &client) {
 /** @checks:
  * User must be invited if the channel is +i;
  * The user's nick/username/hostname must not match any active bans;
@@ -730,36 +746,37 @@ int Server::joinChannel( std::vector<std::string> params, Client &client, std::s
  * 
  */	
 		// check if the channel name is valid
+	std::string	response;
 
 	if (params.size() != 1)
 	{
 		response = "Error: channel name cannot contain spaces\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
+		sendMessage(client.getSocketFd(), response);
+		return (EXIT_FAILURE);
 	}
 
 	// check if the client is registered
 	if (!client.isRegistered())
 	{
 		response = "Error: you must be registered to join a channel\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
+		sendMessage(client.getSocketFd(), response);
+		return (EXIT_FAILURE);
 	}
 
-	// TODO: Check if channel name has comma
+	// TODO: Check proper error message to client
 	if (params[0].find(',') != std::string::npos)
 	{
 		response = "Error: channel name cannot contain commas\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
+		sendMessage(client.getSocketFd(), response);
+		return (EXIT_FAILURE);
 	}
 
-	//TODO: Check if channel name has a control G/BEL
+	// TODO: Check proper error message to client
 	if (params[0].find('\a') != std::string::npos)
 	{
 		response = "Error: channel name cannot contain control G/BEL\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
+		sendMessage(client.getSocketFd(), response);
+		return (EXIT_FAILURE);
 	}
 
 	// create a channel object and add it to the list of channels
@@ -772,12 +789,13 @@ int Server::joinChannel( std::vector<std::string> params, Client &client, std::s
 	if (params[0][0] == '#') {
 		if (!checkChannel(channelName, client))
 			createNewChannel(channelName, client);
-		rpl_Join(client, *Server::getChannel(channelName), response);
+		rpl_Join(client, *Server::getChannel(channelName));
 	}
 	else  {
 		response = channelName + ":No such channel\r\n";
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-			std::cout << "error sending response\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
 	}
-	return (0);
+	return (EXIT_SUCCESS);
 }
