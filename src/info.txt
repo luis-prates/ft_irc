@@ -1,0 +1,231 @@
+
+RFC 2810
+RFC 2811
+RFC 2812
+RFC 2813
+
+NETWORK
+OSI 7 Layers Model (Open Systems Interconnection)
+Send information from one application to another application via a network
+
+		------------------												-------------------				
+		|			SENDER:			|												|			RECEIVER:		|
+		------------------												-------------------
+		|		application		|----- Game events -----|		Application		| -> Input Updates, State Updates
+		 				v																					^
+		|		Presentation	|-- Game Packetization -|		Presentation	|	-> Serialization, Buffering
+		 				v																					^
+		|		Session				|Connection/DataExchange|		Session				|	-> Sockets
+						v					 																^
+		|		Transport			|												|		Transport			|	-> TCP, UDP
+						v					-------------------------				^
+		|		Network				|	Network	->	Network		|		Network				|	-> IP)
+						v								^						v 						^
+		|		Data Link			|	Data Link		Data Link	|		Data Link			|	-> Ethernet (MAC)
+						v								^						v							^
+		|		Physical		->	Physical		Physical	->	Physical			|	-> Wired, Fiber Optics, Wireless
+		-------------------------------------------------------------
+											|					ROUTER:				|
+											-------------------------
+
+NETWORK:
+The connections is only between two devices
+One application is the client and the other is the server
+The server listens to a port number waiting requests from the server,
+Both the server and client use an IP and port number
+IP addresses are configured during Network setup
+The Loopback address 127.0.0.1 refers to the current machine.
+This can be used during development to test both client and server on a single machine
+Different machines use different IPs and those must be configured in the network
+
+----------------------------------------------------------------------------------------------------
+
+PORTS:
+A port will be allocated to the sockets
+It is recommended to choose a number over 1024
+Ports 1...1023 are described as well known ports
+and are reserved for specific applications (port 21 FTP)
+IPs can be bind to ports
+
+----------------------------------------------------------------------------------------------------
+
+SOCKETS:
+Facilitate two-way connections (pipes) between nodes in the network
+Both sides of the connection use sockets
+Sockets can both recieve and send data
+@types:
+- Streaming sockets (SOCK_STREAM)  use TCP (the more secure connection)
+- Datagram socket (SOCK_DGRAM) uses UDP (less reliable and secured)
+
+@creation:
+1. Create: The server creates a new socket (Status:Unbound)
+2. Bind: Bind the server to a valid IP address and port number (Status:Bound)
+3. Listen: The socket is put into listening state,
+	 waiting for incoming connections on the port (Status:Listening)
+4. Client: Repeat steps 1 and 2 (in the client case, the port is dynamically allocated)
+5. When the server "sees" that the client wants to make a connection,
+		it replicates itself (in its bound state) to simultaneously be connected to the client
+		and also listening to other connections
+
+----------------------------------------------------------------------------------------------------
+
+FUNCTIONS:
+int socket(int domain, int type, int protocol);
+domain: The address family specification (AF_INET for TCP or UDP)
+type:		The type specification for the new socket (SOCK_STREAM for TCP)
+protocol: The protocol to be used (IPPROTO_TCP for TCP)
+
+----------------------------------------------------------------------------------------------------
+
+MESSAGES:
+[prefix](optional) [command] [command params] (max 15)
+
+The prefix is indicated with ':'and should be the first character of the message
+Prefix is used by servers to indicate the true origin of the message.
+If a prefix is not in the server database it must be discarded
+
+The command must be a valid IRC command or a three digit number (ASCII text)
+
+Messages are lines of characters terminated with a CR-LF (carriage return - line feed) pair
+(max len 512 including CR-LF (510))
+In some protocols LF or CR anywhere in a message marks the end of that message
+in others, CR-LF is required
+
+Numeric replies are only sent by servers
+[sender prefix] [3 digits] [target]
+
+The server must be able to parse messages from clients returning any appropriate errors.
+It the server encounters a fatal error while parsing a message, an error must be sent back
+to the client ans the parsing terminated.
+
+----------------------------------------------------------------------------------------------------
+
+CONNECTIONS:
+
+To detect when a connection has died or become unresponsive, the server must poll each of
+its connections. The PING command is used if the server doesn't get a response.
+If a connection doesn't respond in time, its connection is closed using appropriate procedures.
+
+	Users
+	When a server successfully registers a new connection, it is required to send to the user
+	messages stating: 
+	- the user identifiers upon which it was registered (RPL_WELCOME)
+	- the server name and version (RPL_YOURHOST)
+	- the server birth information (RPL_CREATED)
+	- available user and channel modes (RPL_MYINFO)
+	- optionally it can send an introductory message
+
+When a client connection unexpectedly closes, a QUIT message is generated on behalf of the client
+by the server to which the client was connected. 
+
+	Registration:
+		1. Pass message (set a connection password)
+				Command: PASS + Parameters: <password>  -> Example: PASS secretpassword
+				Possible server numeric replies: ERR_NEEDMOREPARAMS | ERR_ALREADYREGISTERED
+		2. Nick message
+				Command: NICK + parameter: <nickname> -> Example: NICK Wiz
+				Possible server numeric replies:
+					ERR_NONICKNAMEGIVEN | ERR_NICKNAMEINUSE | ERR_UNAVAILRESOURCE
+					ERR_ERRONEUSNICKNAME | ERR_NICKCOLLISION | ERR_RESTRICTED 
+		3. User message
+				Command: USER + parameter: <User> <mode> <unused> <realname>
+				Possible server numeric replies:
+					ERR_NEEDMOREPARAMS | ERR_ALREADYREGISTERED
+
+		Other User messages:
+			Operator message -> OPER <name> <password>
+			User mode message -> MODE <nickname> <mode flags>
+				flags:
+					a - away; i - invisible; w - wallops; r - restricted;
+					o - operator; O - local operator; s - server notices;
+
+		See Macros.hpp for more...
+
+----------------------------------------------------------------------------------------------------
+
+MAN:
+
+@tcp:
+tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
+
+@socket:	
+AF_INET: IPv4 Internet protocols ip(7)
+AF_INET6: IPv6 Internet protocols ipv6(7)
+SOCK_STREAM:	Provides sequenced, reliable, two-way, connection-based byte streams.
+
+htons, htonl, ntohs, ntohl - Convert multi-byte integer types from host byte order to network byte order
+https://www.gta.ufrj.br/ensino/eel878/sockets/htonsman.html
+
+htons() - host to network short
+
+htonl() - host to network long
+
+ntohs() - network to host short
+
+ntohl() - network to host long
+
+implement local and global operators. Implement command to turn user into operator
+
+Step by step:
+
+Define the necessary data structures for managing client connections, channels, and user information, such as a struct or class to represent each client's socket file descriptor, nickname, username, and current channel. You may also need a data structure to store channel information, such as the channel name, a list of clients who joined the channel, and the channel operator(s).
+
+Create a main function that parses the command-line arguments for the port number and password, initializes the server socket using the socket() function, binds it to the specified port using the bind() function, and starts listening for incoming connections using the listen() function. You should also set the server socket to non-blocking mode using fcntl() or another equivalent function.
+
+Create a loop that accepts incoming connections using the accept() function and adds each new client to the list of connected clients. For each new client, create a new socket file descriptor using the socket() function, set it to non-blocking mode using fcntl(), and add it to the poll() (or equivalent) event list for reading.
+
+When the poll() (or equivalent) function returns, check each socket file descriptor in the event list for new data to read or write. For each client socket with new data to read, use the recv() function to read the data into a buffer, parse the incoming message, and handle it accordingly. For example, if the message starts with "/join", add the client to the specified channel's list of clients, and send a message to all clients in the channel to inform them of the new client's presence.
+
+For each client socket with pending data to write, use the send() function to send the data to the client. You may need to split long messages into smaller chunks to avoid sending too much data at once.
+
+Handle disconnections by removing the client's socket file descriptor from the poll() (or equivalent) event list and closing the socket using the close() function. Also, remove the client from any channel they were in and inform the remaining clients in the channel.
+
+Implement the necessary commands for authenticating, setting a nickname, a username, joining a channel, sending and receiving private messages, distinguishing between operators and regular users, and handling operator-specific commands. For example, you may need to add a password check before allowing clients to connect, and you may need to assign a unique nickname to each client to avoid conflicts.
+
+Test your server using a reference client or a custom client program to verify that it can handle multiple clients, forward messages to the correct channels and clients, and distinguish between operators and regular users.
+
+Refactor and optimize your code as necessary to improve performance, readability, and maintainability. You may want to use helper functions or classes to abstract common operations and reduce code duplication, or use more advanced data structures or algorithms to handle large numbers of clients or channels.
+
+This is just a rough outline of the steps involved in implementing an IRC server in C++ 98. Depending on your specific requirements and constraints, you may need to adjust some of the details or add additional features or optimizations.
+
+----------------------------------------------------------------------------------------------------
+Channel Scope
+
+Channels names are strings (beginning with a '&', '#', '+' or '!' character) of length up to fifty (50) characters. Channel names are case insensitive.
+
+Apart from the the requirement that the first character being either '&', '#', '+' or '!' (hereafter called "channel prefix"). The only restriction on a channel name is that it SHALL NOT contain any spaces (' '), a control G (^G or ASCII 7), a comma (',' which is used as a list item separator by the protocol).  Also, a colon (':') is used as a delimiter for the channel mask.  The exact syntax of a channel name is defined in "IRC Server Protocol" [IRC-SERVER].
+
+The use of different prefixes effectively creates four (4) distinct namespaces for channel names.  This is important because of the protocol limitations regarding namespaces (in general).  See section6.1 (Labels) for more details on these limitations.
+
+Channels with '&' as prefix are local to the server where they are created.
+
+Channel Properties
+
+Each channel has its own properties, which are defined by channel modes.  Channel modes can be manipulated by the channel members. The modes affect the way servers manage the channels.
+Channels with '+' as prefix do not support channel modes. This means that all the modes are unset, with the exception of the 't' channel flag which is set.
+
+Privileged Channel Members
+
+In order for the channel members to keep some control over a channel, and some kind of sanity, some channel members are privileged.  Only these members are allowed to perform the following actions on the channel:
+
+    INVITE  - Invite a client to an invite-only channel (mode +i)
+    KICK    - Eject a client from the channel
+    MODE    - Change the channel's mode, as well as members' privileges
+    PRIVMSG - Sending messages to the channel (mode +n, +m, +v)
+    TOPIC   - Change the channel topic in a mode +t channel
+
+Channel Operators
+
+The channel operators (also referred to as a "chop" or "chanop") on a given channel are considered to 'own' that channel.  Ownership of a channel is shared among channel operators.
+
+Channel operators are identified by the '@' symbol next to their nickname whenever it is associated with a channel (i.e., replies to the NAMES, WHO and WHOIS commands).
+
+Since channels starting with the character '+' as prefix do not support channel modes, no member can therefore have the status of channel operator.
+
+Channel Creator
+
+A user who creates a channel with the character '!' as prefix is identified as the "channel creator".  Upon creation of the channel, this user is also given channel operator status.
+
+In recognition of this status, the channel creators are endowed with the ability to toggle certain modes of the channel which channel operators may not manipulate.
+
+A "channel creator" can be distinguished from a channel operator by issuing the proper MODE command.  See the "IRC Client Protocol" [IRC-CLIENT] for more information on this topic.
