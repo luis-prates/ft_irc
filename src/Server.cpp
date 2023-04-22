@@ -593,7 +593,7 @@ int	Server::user(std::vector<std::string> params, Client &client) {
 		if (sendMessage(client.getSocketFd(), response) == -1)
 			return (EXIT_FAILURE);
 	}
-	else {
+	else if (!client.isRegistered()) {
 		client.setUsername(params[0]);
 		for (int i = 3; i < params.size(); i++)
 			realName += params[i] + " ";
@@ -601,6 +601,11 @@ int	Server::user(std::vector<std::string> params, Client &client) {
 		client.setRealname(realName);
 		client.setRegistered(true);
 		this->rpl_Welcome(client);
+	}
+	else {
+		response = ":" + this->getHostname() + " 462 " + client.getNickname() + " :You may not reregister\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
 	}
 	return (EXIT_SUCCESS);
 }
