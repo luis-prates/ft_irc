@@ -53,12 +53,60 @@ bool	Channel::isClientInChannel(Client client) {
 	return (false);
 }
 
+bool	Channel::isClientInChannel(std::string nickname) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == nickname)
+			return (true);
+	}
+	return (false);
+}
+
 bool	Channel::isOperatorInChannel(Client client) {
 	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
 		if (it->getNickname() == client.getNickname())
 			return (true);
 	}
 	return (false);
+}
+
+bool	Channel::isOperatorInChannel(std::string nickname) {
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == nickname)
+			return (true);
+	}
+	return (false);
+}
+
+std::vector<Client>::iterator	Channel::findClient(Client client) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == client.getNickname())
+			return (it);
+	}
+	return (_clients.end());
+}
+
+std::vector<Client>::iterator	Channel::findClient(std::string nickname) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == nickname)
+			return (it);
+	}
+	return (_clients.end());
+}
+
+std::vector<Client>::iterator	Channel::findOperator(Client client) {
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == client.getNickname())
+			return (it);
+	}
+	return (_operators.end());
+}
+
+std::vector<Client>::iterator	Channel::findOperator(std::string nickname) {
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == nickname)
+			return (it);
+	}
+	return (_operators.end());
 }
 
 /* REFERENCES:

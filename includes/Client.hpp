@@ -3,6 +3,7 @@
 
 # include <cstdlib>
 # include <string>
+# include <vector>
 
 class Client
 {
@@ -29,6 +30,10 @@ class Client
 		void								setIpAddress(char* ipAddress);
 		u_int16_t							getPort() const;
 		void								setPort(u_int16_t port);
+		std::vector<std::string>&			getModes();
+		void								setMode(std::string mode);
+		void								unsetMode(std::string mode);
+		std::vector<std::string>::iterator	findMode(std::string mode);
 		void								clearClient();
 
 	private:
@@ -39,6 +44,7 @@ class Client
 		std::string						_nickname;
 		std::string						_username;
 		std::string						_realname;
+		std::vector<std::string>		_modes;
 		bool							_isOperator;
 		char							*_ipAddress;
 		u_int16_t						_port;
