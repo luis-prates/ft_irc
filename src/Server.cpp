@@ -2,12 +2,6 @@
 #include "../includes/Channel.hpp"
 #include "../headers/Macros.hpp"
 
-Server::Server()
-{
-	
-}
-
-
 Server::Server(std::string password): _password(password)
 {
 	
@@ -20,11 +14,10 @@ Server::~Server()
 
 int	Server::setup_server(int port)
 {
-	int sockOpt = 1;
+	int	sockOpt = 1;
 
 	_addrlen = sizeof(_address);
 	// create the socket
-	//TODO: check if more error handling is needed
 	if ((_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
 	{
 		std::cerr << "Error: Failed to create the server socket\n";
@@ -39,7 +32,6 @@ int	Server::setup_server(int port)
 		perror("setsockopt");
 		throw ServerException();
 	}
-
 	// Set the socket to non-blocking mode
 	if (fcntl(_socket, F_SETFL, O_NONBLOCK) == -1) {
 		std::cerr << "Error setting socket flags: " << strerror(errno) << std::endl;
@@ -56,9 +48,7 @@ int	Server::setup_server(int port)
 		std::cerr << "Error: Failed to bind the server socket to a port\n";
 		perror("bind failed");
 		throw ServerException();
-
 	}
-
 	if (listen(_socket, MAX_CONNECTIONS) < 0)
 	{
 		std::cerr << "Error: Failed to start listening for incoming connections\n";
@@ -67,57 +57,46 @@ int	Server::setup_server(int port)
 	}
 	std::cout << "Server started and listening for incoming connections on port " << port << std::endl;
 
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
-int	Server::run()
+bool	Server::run()
 {
 	fdResetNSet(_clients);
 
 	std::cout << "Waiting for new connections...\n";
-	if (select(_maxFd + 1, &_readFds, NULL, NULL, NULL) < 0 && errno == EINTR)
-	{
-		perror("select");
-		std::cerr << "Error: Failed to select file descriptors\n";
-		throw ServerException();
-	}
+	if (select(_maxFd + 1, &_readFds, NULL, NULL, NULL) < 0)
+		return (false);
 	//If something happened on the master socket,
 	//then its an incoming connection
 	if (FD_ISSET(this->getSocket(), &_readFds))
-		if (handleNewConnection(_clients))
-			return (EXIT_FAILURE);
+		if (handleNewConnection(_clients) == EXIT_FAILURE)
+			return (false);
 
 	//else it's some IO operation on some other socket
 	for (int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if (FD_ISSET(_clients[i].getSocketFd(), &_readFds))
 		{
-
 			//Check if it was for closing, and also read the
 			//incoming message
-			if (handleClientInput(_clients[i]) == 0)
-			{
-				//Echo back the message that came in
-				std::cout << "Handled client input with success\n";
-				//send(clientFd, message.c_str(), message.size(), 0);
+			if (handleClientInput(_clients[i]) == EXIT_FAILURE) {
+				std::cout << "Client disconnected\n";
+				return (true);
 			}
 		}
 	}
-	return (EXIT_SUCCESS);
+	return (true);
 }
 
 int	Server::clear_fd_set()
 {
 	// Clean up
 	for (int fd = 0; fd <= _maxFd; fd++)
-	{
 		if (FD_ISSET(fd, &_readFds))
-		{
 			close(fd);
-		}
-	}
 	close(this->getSocket());
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 
@@ -145,21 +124,19 @@ int	Server::fdResetNSet(std::vector<Client> &clients)
 		if(clientFd > _maxFd)
 			_maxFd = clientFd;
 	}
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 int	Server::handleNewConnection(std::vector<Client> &clients)
 {
-	t_socket tmpSocket;
-	tmpSocket.addrlen = sizeof(tmpSocket.address);
+	t_socket	tmpSocket;
 
+	tmpSocket.addrlen = sizeof(tmpSocket.address);
 	if ((tmpSocket.socket = accept(this->getSocket(),
 			(struct sockaddr *)&tmpSocket.address, (socklen_t*)&tmpSocket.addrlen)) < 0)
 	{
 		perror("accept");
-		//fdResetNSet(clients);
 		return (EXIT_FAILURE);
-		//throw ServerException();
 	}
 		
 	//inform user of socket number - used in send and receive commands
@@ -179,18 +156,17 @@ int	Server::handleNewConnection(std::vector<Client> &clients)
 			break;
 		}
 	}
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 int	Server::handleClientInput(Client &client)
 {
-	int returnValue;
-	int valread;
-	char buffer[BUFFER_SIZE];
+	int		valread;
+	char	buffer[BUFFER_SIZE];
 
 	//Check if it was for closing , and also read the 
 	//incoming message
-	if ((valread = recv(client.getSocketFd(), buffer, 1024, 0)) <= 0)
+	if ((valread = recv(client.getSocketFd(), buffer, BUFFER_SIZE - 1, 0)) <= 0)
 	{
 		std::cout << "Host disconnected, ip: " << client.getIpAddress() << \
 				" port:" << client.getPort() << std::endl;
@@ -201,6 +177,7 @@ int	Server::handleClientInput(Client &client)
 			quit(dcParams, client);
 		}
 		cleanClientFromServer(client);
+		return (EXIT_FAILURE);
 	}
 	//Echo back the message that came in 
 	else 
@@ -213,38 +190,18 @@ int	Server::handleClientInput(Client &client)
 		// '\012' represents \r\n
 		if (client.getOutputBuffer().find('\012') != std::string::npos)
 		{
-			std::cout << "Message complete. Message is: " << client.getOutputBuffer() << std::endl;
 			std::vector<std::string> commands = split(client.getOutputBuffer(), '\012');
 			for (size_t k = 0; k < commands.size(); k++)
 			{
 				commands[k].erase(std::find(commands[k].begin(), commands[k].end(), '\r'), commands[k].end());
 				std::cout << "Command: " << commands[k] << std::endl;
-				returnValue = handleCommands(commands[k], client);
-				switch (returnValue)
-				{
-					case -1:
-						std::cout << "Command not found\n";
-						break;
-					case 0:
-						std::cout << "Command handled with success\n";
-						break;
-					case 1:
-						std::cout << "Unknown error\n";
-						break;
-					case 2:
-						return (EXIT_FAILURE);
-				}
+				if (handleCommands(commands[k], client) == 2)
+					return (EXIT_FAILURE);
 			}
 			client.getOutputBuffer().clear();
 		}
-		else
-		{
-			std::cout << "\\r\\n was not found\n";
-			std::cout << "Received message: " << buffer << std::endl;
-			std::cout << "Output buffer: " << client.getOutputBuffer() << std::endl;
-		}
 	}
-	return (0);
+	return (EXIT_SUCCESS);
 }
 
 // needs refactoring and proper handling of commands
@@ -260,11 +217,7 @@ int	Server::handleCommands(std::string message, Client &client)
 	command = message.substr(0, message.find(' '));
 	std::transform(command.begin(), command.end(), command.begin(), ::tolower);
 	// get the parameters
-	std::cout << "command: " << command << std::endl;
 	params = split(message.substr(message.find(' ') + 1), ' ');
-	for (size_t i = 0; i < params.size(); i++) {
-		std::cout << "param: " << params[i] << std::endl;
-	}
 	// check if the command is valid
 	if (command == "nick")
 		return (handleNick(params, client));
@@ -292,7 +245,7 @@ int	Server::handleCommands(std::string message, Client &client)
 	//else if (command == "kick")
 	//	return (kick(params[0], client));
 	else
-		return (invalidCommand(command, params, client));
+		return (invalidCommand(command, client));
 	return (EXIT_SUCCESS);
 }
 
@@ -417,7 +370,7 @@ int	Server::privmsg(std::vector<std::string> params, Client &client) {
 					return (EXIT_SUCCESS);
 				}
 				// message to channel
-				for (int i = 1; i < params.size(); i++)
+				for (size_t i = 1; i < params.size(); i++)
 						msg += params[i] + " ";
 				msg.erase(msg.size() - 1);
 				// Reply to the client to send message to channel
@@ -448,7 +401,7 @@ int	Server::privmsg(std::vector<std::string> params, Client &client) {
 		// message to user
 		for (itClient = _clients.begin(); itClient != _clients.end(); ++itClient) {
 			if (itClient->getNickname() == params[0]) {
-				for (int i = 1; i < params.size(); i++)
+				for (size_t i = 1; i < params.size(); i++)
 					msg += params[i] + " ";
 				// Reply to the client to send message to user
 				response = ":" + client.getNickname() + " PRIVMSG " + itClient->getNickname() + " " + msg + "\r\n";
@@ -484,7 +437,7 @@ int	Server::notice(std::vector<std::string> params, Client &client)
 			// message to channel
 			itChannel = getChannelIterator(params[0]);
 			if (itChannel != _channels.end() && (itChannel->isClientInChannel(client) || itChannel->isOperatorInChannel(client))) {
-				for (int i = 1; i < params.size(); i++)
+				for (size_t i = 1; i < params.size(); i++)
 					response += params[i] + " ";
 				response.erase(response.size() - 1);
 				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " " + response + "\r\n";
@@ -507,7 +460,7 @@ int	Server::notice(std::vector<std::string> params, Client &client)
 			// message to user
 			itClient = getClientIterator(params[0]);
 			if (itClient != _clients.end()) {
-				for (int i = 1; i < params.size(); i++)
+				for (size_t i = 1; i < params.size(); i++)
 					response += params[i] + " ";
 				response.erase(response.size() - 1);
 				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " " + response + "\r\n";
@@ -554,7 +507,7 @@ int	Server::part(std::vector<std::string> params, Client &client) {
 			if (sendMessage(client.getSocketFd(), response) == -1)
 				return (EXIT_FAILURE);
 			if (response.find("PART") != std::string::npos) {
-				for (int i = 1; i < params.size(); i++)
+				for (size_t i = 1; i < params.size(); i++)
 					msg += params[i] + " ";
 				msg.erase(msg.size() - 1);
 				msg = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + itChannel->getName() + " :" + msg + "\r\n";
@@ -601,7 +554,7 @@ int	Server::user(std::vector<std::string> params, Client &client) {
 	}
 	else if (!client.isRegistered()) {
 		client.setUsername(params[0]);
-		for (int i = 3; i < params.size(); i++)
+		for (size_t i = 3; i < params.size(); i++)
 			realName += params[i] + " ";
 		realName.erase(realName.size() - 1);
 		client.setRealname(realName);
@@ -654,7 +607,7 @@ int Server::quit(std::vector<std::string> params, Client &client)
 	if (params.size() == 0)
 		response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " QUIT :Client Quit\r\n";
 	else {
-		for (int i = 0; i < params.size(); i++)
+		for (size_t i = 0; i < params.size(); i++)
 			response += params[i] + " ";
 		response.erase(response.size() - 1);
 		response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " QUIT " + response + "\r\n";
@@ -677,15 +630,17 @@ int Server::quit(std::vector<std::string> params, Client &client)
 	return (EXIT_SUCCESS);
 }
 
-void	Server::kick(std::string channel_name, Client &client)
+void	Server::kick(std::string channelName, Client &client)
 {
-	bool kick = false;
+	(void) channelName;
+	(void) client;
+	//bool kick = false;
 	/*kick = removeOp(victim);
 	if (kick == false)
 		kick = removeClient(victim);*/
 }
 
-int	Server::invalidCommand(std::string command, std::vector<std::string> params, Client &client)
+int	Server::invalidCommand(std::string command, Client &client)
 {
 	std::string	response;
 	std::transform(command.begin(), command.end(), command.begin(), ::toupper);
@@ -752,7 +707,7 @@ void Server::cleanClientFromServer(Client &client)
 	//Close the socket and mark as 0 in list for reuse
 	close(client.getSocketFd());
 	FD_CLR(client.getSocketFd(), &_readFds);
-	for (int j = 0; j < _channels.size(); j++)
+	for (size_t j = 0; j < _channels.size(); j++)
 	{
 		_channels[j].removeClient(client);
 		_channels[j].removeOp(client);
@@ -823,7 +778,7 @@ int Server::joinChannel( std::vector<std::string> params, Client &client) {
 
 	if (params.size() != 1)
 	{
-		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + itClient->getNickname() + " JOIN :Incorrect number of arguments\r\n";
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + client.getNickname() + " JOIN :Incorrect number of arguments\r\n";
 		if (sendMessage(client.getSocketFd(), response) == -1)
 			return (EXIT_FAILURE);
 		return (EXIT_SUCCESS);
@@ -843,7 +798,7 @@ int Server::joinChannel( std::vector<std::string> params, Client &client) {
 
 	if (params[0].find(',') != std::string::npos)
 	{
-		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + itClient->getNickname() + " JOIN :Invalid channel name (comma not allowed)\r\n";
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + client.getNickname() + " JOIN :Invalid channel name (comma not allowed)\r\n";
 		if (sendMessage(client.getSocketFd(), response) == -1)
 			return (EXIT_FAILURE);
 		return (EXIT_SUCCESS);
@@ -851,7 +806,7 @@ int Server::joinChannel( std::vector<std::string> params, Client &client) {
 
 	if (params[0].find('\a') != std::string::npos)
 	{
-		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + itClient->getNickname() + " JOIN :Channel name cannot contain control G/BEL\r\n";
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + client.getNickname() + " JOIN :Channel name cannot contain control G/BEL\r\n";
 		if (sendMessage(client.getSocketFd(), response) == -1)
 			return (EXIT_FAILURE);
 		return (EXIT_SUCCESS);
