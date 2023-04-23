@@ -1,31 +1,32 @@
 // RFC 2812
 
 //Numeric replies: (not all of them.. and mayce we should not use all of them...)
-	#define ERR_ALREADYREGISTERED
+	#define ERR_ALREADYREGISTERED	"462"
 	#define ERR_BADCHANNELKEY
 	#define ERR_BADCHANMASK
 	#define ERR_BANNEDFROMCHAN
-	#define ERR_CANNOTSENDTOCHAN
+	#define ERR_CANNOTSENDTOCHAN	"404"
 	#define ERR_CANTKILLSERVER
 	#define ERR_CHANNELISFULL
-	#define ERR_CHANOPRIVSNEEDED
+	#define ERR_CHANOPRIVSNEEDED	"482"
 	#define ERR_ERRONEUSNICKNAME
-	#define ERR_INVITEONLYCHAN
-	#define ERR_NEEDMOREPARAMS
+	#define ERR_INVITEONLYCHAN		"473"
+	#define ERR_NEEDMOREPARAMS		"461"
 	#define ERR_NICKCOLLISION
 	#define ERR_NICKNAMEINUSE
-	#define ERR_NONICKNAMEGIVEN
+	#define ERR_NONICKNAMEGIVEN		"431"
 	#define ERR_NOOPERHOST
 	#define ERR_NOPRIVILEGES
 	#define ERR_NORECIPIENT
 	#define ERR_NOORIGIN
-	#define ERR_NOSUCHCHANNEL
-	#define ERR_NOSUCHNICK
+	#define ERR_NOSUCHCHANNEL		"403"
+	#define ERR_NOSUCHNICK			"401"
 	#define ERR_NOSUCHSERVER
 	#define ERR_NOTEXTTOSEND
-	#define ERR_NOTONCHANNEL
+	#define ERR_NOTONCHANNEL		"442"
 	#define ERR_NOTOPLEVEL
-	#define ERR_PASSWDMISMATCH
+	#define ERR_NOTREGISTERED		"451"
+	#define ERR_PASSWDMISMATCH		"464"
 	#define ERR_RESTRICTED
 	#define ERR_TOOMANYCHANNELS
 	#define ERR_TOOMANYMATCHES
@@ -33,24 +34,26 @@
 	#define ERR_UMODEUNKNOWNFLAG
 	#define ERR_UNAVAILRESOURCE
 	#define ERR_USERDONTMATCH
-	#define ERR_USERNOTINCHANNEL
-	#define ERR_USERONCHANNEL
+	#define ERR_USERNOTINCHANNEL	"441"
+	#define ERR_USERONCHANNEL		"443"
 	#define ERR_WHOISCHANNELS
 	#define ERR_WILDTOPLEVEL
+	#define ERR_UNKNOWNCOMMAND		"421"
 
 
 // Command responses
 
 //Replies 001 to 004 sent to user upon successful registration
-	#define RPL_WELCOME		001
-	#define RPL_YOURHOST	002
-	#define RPL_CREATED		003
-	#define RPL_MYINFO		004
+	#define RPL_WELCOME				"001"
+	#define RPL_YOURHOST			"002"
+	#define RPL_CREATED				"003"
+	#define RPL_MYINFO				"004"
 	
 	#define RPL_AWAY
+	#define RPL_CHANNELMODEIS		"324"
 	#define RPL_ENDOFMOTD
-	#define RPL_ENDOFNAMES
-	#define RPL_ENDOFWHO
+	#define RPL_ENDOFNAMES			"366"
+	#define RPL_ENDOFWHO			"315"
 	#define RPL_ENDOFWHOIS
 	#define RPL_ENDOFWHOWAS
 	#define RPL_INVITING
@@ -58,15 +61,17 @@
 	#define RPL_LISTENED
 	#define RPL_MOTD
 	#define RPL_MOTDSTART
-	#define RPL_NAMREPLY
+	#define RPL_NAMREPLY			"353"
 	#define RPL_NOMOTD
-	#define RPL_TOPIC
-	#define RPL_UMODEIS
+	#define RPL_NOTOPIC				"331"
+	#define RPL_TOPIC				"332"
+	#define RPL_UMODEIS				"221"
 	#define RPL_WHOISCHANNELS
 	#define RPL_WHOISIDLE
 	#define RPL_WHOISOPERATOR
 	#define RPL_WHOISSERVER
 	#define RPL_WHOISUSER
+	#define RPL_WHOSPCRPL			"354"
 	#define RPL_WHOWASUSER
 	#define RPL_WHOREPLY
 	#define RPL_YOUREOPER

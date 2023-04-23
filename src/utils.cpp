@@ -28,7 +28,7 @@ void	handleSignal(int signal)
 {
 	if (signal == SIGINT)
 	{
-		std::cout << "SIGINT received. Exiting..." << std::endl;
+		std::cout << "\nSIGINT received. Exiting...\n";
 		return;
 	}
 	return ;
