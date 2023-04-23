@@ -194,7 +194,12 @@ int	Server::handleClientInput(Client &client)
 	{
 		std::cout << "Host disconnected, ip: " << client.getIpAddress() << \
 				" port:" << client.getPort() << std::endl;
-		
+		if (client.isRegistered()) {
+			std::vector<std::string> dcParams;
+			std::string dcMsg("Client disconnected from server");
+			dcParams.push_back(dcMsg);
+			quit(dcParams, client);
+		}
 		cleanClientFromServer(client);
 	}
 	//Echo back the message that came in 
@@ -524,36 +529,52 @@ int	Server::notice(std::vector<std::string> params, Client &client)
 }
 
 int	Server::part(std::vector<std::string> params, Client &client) {
-	std::string response;
-	std::vector<Client>::iterator it2;
+	std::string						response;
+	std::string						msg;
+	std::vector<Client>::iterator	itClient;
 
-	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
-		if (it->_name == params[0])	{
+	for(std::vector<Channel>::iterator itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
+		if (itChannel->_name == params[0])	{
 
 			// remove the client from the channel
-			for (it2 = it->_clients.begin(); it2 != it->_clients.end(); ++it2)
-				if (client.getNickname() == it2->getNickname())
+			for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient)
+				if (client.getNickname() == itClient->getNickname())
 					break;
 
-			if (it2 == it->_clients.end()) {
-				for (it2 = it->_operators.begin(); it2 != it->_operators.end(); ++it2)
-					if (client.getNickname() == it2->getNickname())
+			if (itClient == itChannel->_clients.end()) {
+				for (itClient = itChannel->_operators.begin(); itClient != itChannel->_operators.end(); ++itClient)
+					if (client.getNickname() == itClient->getNickname())
 						break;
 			}
-			if (it2 == it->_operators.end())
-				response = ":" + this->getHostname() + " 442 " + it2->getNickname() + " " + it->getName() + " :You're not on that channel\r\n";
+			if (itClient == itChannel->_operators.end())
+				response = ":" + this->getHostname() + " 442 " + itClient->getNickname() + " " + itChannel->getName() + " :You're not on that channel\r\n";
 			else
 				// Reply to the client to confirm the part
-				response = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + it->getName() + "\r\n";
+				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " PART " + itChannel->getName() + "\r\n";
 			if (sendMessage(client.getSocketFd(), response) == -1)
 				return (EXIT_FAILURE);
 			if (response.find("PART") != std::string::npos) {
-				if (it->isClientInChannel(client))
-					it->_clients.erase(it2);
+				for (int i = 1; i < params.size(); i++)
+					msg += params[i] + " ";
+				msg.erase(msg.size() - 1);
+				msg = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + itChannel->getName() + " :" + msg + "\r\n";
+				if (itChannel->isClientInChannel(client))
+					itChannel->_clients.erase(itClient);
 				else
-					it->_operators.erase(it2);
-				if (it->_clients.empty() && it->_operators.empty())
-					_channels.erase(it);
+					itChannel->_operators.erase(itClient);
+				if (itChannel->_clients.empty() && itChannel->_operators.empty())
+					_channels.erase(itChannel);
+				else {
+					// Send the part message to the other clients in the channel
+					for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
+						if (sendMessage(itClient->getSocketFd(), msg) == -1)
+							return (EXIT_FAILURE);
+					}
+					for (itClient = itChannel->_operators.begin(); itClient != itChannel->_operators.end(); ++itClient) {
+						if (sendMessage(itClient->getSocketFd(), msg) == -1)
+							return (EXIT_FAILURE);
+					}
+				}
 			}
 			return (EXIT_SUCCESS);
 		}
