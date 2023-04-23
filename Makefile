@@ -11,7 +11,7 @@ INC_DIRS				:=		$(shell find $(PATH_INC) -type d)
 
 CC							:=		c++
 
-FLAG_WARN				:=		#-Wall -Wextra -Werror
+FLAG_WARN				:=		-Wall -Wextra -Werror
 FLAG_SHADOW			:=		-Wshadow -Wno-shadow	
 FLAG_STD				:=		-std=c++98
 FLAG_MAKE				:=		-MMD -MP

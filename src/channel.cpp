@@ -1,15 +1,15 @@
-	#include "../includes/Channel.hpp"
-	#include "../includes/Server.hpp"
-	
-	void Channel::addClient(Client client) {
-		_clients.push_back(client);
-	}
+#include "../includes/Channel.hpp"
+#include "../includes/Server.hpp"
 
-	void Channel::addOperator(Client op) {
-		_operators.push_back(op);
-	}
+void Channel::addClient(Client client) {
+	_clients.push_back(client);
+}
 
-	bool	Channel::removeClient(Client client) {
+void Channel::addOperator(Client op) {
+	_operators.push_back(op);
+}
+
+bool	Channel::removeClient(Client client) {
 	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
 		if (it->getNickname() == client.getNickname()) {
 			_clients.erase(it);
@@ -19,120 +19,54 @@
 	return (false);
 }
 
-	void Channel::removeOp(Client op)	{
-		for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
-			if (it->getNickname() == op.getNickname()) {
-				_clients.erase(it);
-				break;
-			}
-			{
-				_clients.erase(it);
-				break;
-			}
+bool Channel::removeOp(Client op)	{
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == op.getNickname()) {
+			_operators.erase(it);
+			return (true);
 		}
 	}
-
-	void Channel::joinChannel(Client client) {
-		Channel::addClient(client);
-		Channel::addOperator(client);
-	}
-
-	std::string Channel::getTopic() { return (_topic); }
-
-	void Channel::setTopic(std::string topic) { _topic = topic; }
-
-	std::string Channel::getName() { return (_name); }
-
-int Server::joinChannel( std::vector<std::string> params, Client &client, std::string &response) {
-/** @checks:
- * User must be invited if the channel is +i;
- * The user's nick/username/hostname must not match any active bans;
- * The correct password must be given if the channel is +k;
- * 
- * @reply:
- * Receive notice about all commands their server receives that affect the channel:
- * -	MODE	-	KICK	-	PART	-	QUIT	-	PRIVMSG	-	NOTICE
- * 
- * If a JOIN is successful, the user is then sent the channel's topic (using RPL_TOPIC)
- * and the list of users who are on the channel (using RPL_NAMREPLY),
- * which MUST include the user joining.
- * 
- */	
-		// check if the channel name is valid
-
-	if (params.size() != 1)
-	{
-		response = "Error: channel name cannot contain spaces\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
-	}
-
-	// check if the client is registered
-	if (!client.isRegistered())
-	{
-		response = "Error: you must be registered to join a channel\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
-	}
-
-	// TODO: Check if channel name has comma
-	if (params[0].find(',') != std::string::npos)
-	{
-		response = "Error: channel name cannot contain commas\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
-	}
-
-	//TODO: Check if channel name has a control G/BEL
-	if (params[0].find('\a') != std::string::npos)
-	{
-		response = "Error: channel name cannot contain control G/BEL\r\n";
-		send(client.getSocketFd(), response.c_str(), response.size(), 0);
-		return (0);
-	}
-
-	// create a channel object and add it to the list of channels
-	std::string channelName = params[0];
-
-/** 
-*	if channel name is valid check if the channel already exists
-*	if not, create a new channel and send a reply to the JOIN command
-*/
-	if (params[0][0] == '#') {
-		if (!checkChannel(channelName, client))
-			createNewChannel(channelName, client, response);
-		rpl_Join(client, *Server::getChannel(channelName), response);
-	}
-	else  {
-		response = channelName + ":No such channel\r\n";
-		if (send(client.getSocketFd(), response.c_str(), response.size(), 0) == -1)
-			std::cout << "error sending response\n";
-	}
-	return (0);
+	return (false);
 }
 
-// Create a new channel
-void Server::createNewChannel(std::string channelName, Client &client, std::string response) {
-	// Create a new Channel, add it to the list of channels and add the client to the channel
-	Channel newChannel(channelName, client);
-	Server::_channels.push_back(newChannel);
-	std::cout << "Channel " << newChannel.getName() << " created\n";
-	newChannel.joinChannel(client); // define the client and operator
-	std::cout << "Client " << client.getNickname() << " joined channel " << newChannel.getName() << "\n";
-	//client.addChannel(channelName);
+std::string Channel::getTopic() { return (_topic); }
+
+void Channel::setTopic(std::string topic) { _topic = topic; }
+
+std::string Channel::getName() { return (_name); }
+
+std::string Channel::getMode() {
+	std::string response = "+";
+
+	for (std::vector<char>::iterator it = this->_mode.begin(); it != this->_mode.end(); ++it) {
+		if (*it == ':') break;
+		response += *it;
+	}
+	return response;
 }
 
-// Check if channel already exists
-int	Server::checkChannel(std::string channelName, Client &client){
-	std::vector<Channel>::iterator it;
-	for(it = Server::_channels.begin(); it != Server::_channels.end(); ++it) {
-		if (it->_name == channelName)	{
-			it->addClient(client);
-			//client.addChannel(channelName);
-			return (1);
-		}
+std::vector<char> Channel::getModeVector() { return (_mode); }
+
+void	Channel::addMode(char mode) {
+	std::vector<char>::iterator	itChannel;
+
+	for (itChannel = this->_mode.begin(); itChannel != this->_mode.end(); ++itChannel) {
+		if (*itChannel == mode)
+			break;
 	}
-	return (0);
+	if (itChannel == this->_mode.end())
+		this->_mode.push_back(mode);
+}
+
+void	Channel::removeMode(char mode) {
+	std::vector<char>::iterator	itChannel;
+
+	for (itChannel = this->_mode.begin(); itChannel != this->_mode.end(); ++itChannel) {
+		if (*itChannel == mode)
+			break;
+	}
+	if (itChannel != this->_mode.end())
+		this->_mode.erase(itChannel);
 }
 
 bool	Channel::isClientInChannel(Client client) {
@@ -141,6 +75,112 @@ bool	Channel::isClientInChannel(Client client) {
 			return (true);
 	}
 	return (false);
+}
+
+bool	Channel::isClientInChannel(std::string nickname) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == nickname)
+			return (true);
+	}
+	return (false);
+}
+
+bool	Channel::isOperatorInChannel(Client client) {
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == client.getNickname())
+			return (true);
+	}
+	return (false);
+}
+
+bool	Channel::isOperatorInChannel(std::string nickname) {
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == nickname)
+			return (true);
+	}
+	return (false);
+}
+
+bool	Channel::isModeSet(char mode) {
+	for (std::vector<char>::iterator it = this->_mode.begin(); it != this->_mode.end(); ++it) {
+		if (*it == mode)
+			return (true);
+	}
+	return (false);
+}
+
+bool	Channel::isInvited(Client client) {
+	for (std::vector<std::string>::iterator it = _invited.begin(); it != _invited.end(); ++it) {
+		if (*it == client.getNickname())
+			return (true);
+	}
+	return (false);
+}
+
+bool	Channel::isInvited(std::string nickname) {
+	for (std::vector<std::string>::iterator it = _invited.begin(); it != _invited.end(); ++it) {
+		if (*it == nickname)
+			return (true);
+	}
+	return (false);
+}
+
+void	Channel::addInvited(Client client) {
+	_invited.push_back(client.getNickname());
+}
+
+void	Channel::addInvited(std::string nickname) {
+	_invited.push_back(nickname);
+}
+
+void	Channel::removeInvited(Client client) {
+	for (std::vector<std::string>::iterator it = _invited.begin(); it != _invited.end(); ++it) {
+		if (*it == client.getNickname()) {
+			_invited.erase(it);
+			return;
+		}
+	}
+}
+
+void	Channel::removeInvited(std::string nickname) {
+	for (std::vector<std::string>::iterator it = _invited.begin(); it != _invited.end(); ++it) {
+		if (*it == nickname) {
+			_invited.erase(it);
+			return;
+		}
+	}
+}
+
+std::vector<Client>::iterator	Channel::findClient(Client client) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == client.getNickname())
+			return (it);
+	}
+	return (_clients.end());
+}
+
+std::vector<Client>::iterator	Channel::findClient(std::string nickname) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == nickname)
+			return (it);
+	}
+	return (_clients.end());
+}
+
+std::vector<Client>::iterator	Channel::findOperator(Client client) {
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == client.getNickname())
+			return (it);
+	}
+	return (_operators.end());
+}
+
+std::vector<Client>::iterator	Channel::findOperator(std::string nickname) {
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == nickname)
+			return (it);
+	}
+	return (_operators.end());
 }
 
 /* REFERENCES:

@@ -3,6 +3,11 @@
 Client::Client(int socketFd) : _socketFd(socketFd), _isRegistered(false)
 {}
 
+bool Client::operator==(const Client& client) const
+{
+	return _nickname == client._nickname;
+}
+
 int Client::getSocketFd() const
 {
 	return (_socketFd);
@@ -81,6 +86,32 @@ u_int16_t Client::getPort() const
 void Client::setPort(u_int16_t port)
 {
 	_port = port;
+}
+
+std::vector<std::string>& Client::getModes()
+{
+	return (_modes);
+}
+
+void Client::setMode(std::string mode)
+{
+	_modes.push_back(mode);
+}
+
+void Client::unsetMode(std::string mode)
+{
+	std::vector<std::string>::iterator it = findMode(mode);
+	_modes.erase(it);
+}
+
+std::vector<std::string>::iterator Client::findMode(std::string mode)
+{
+	for (std::vector<std::string>::iterator it = _modes.begin(); it != _modes.end(); it++)
+	{
+		if (*it == mode)
+			return (it);
+	}
+	return (_modes.end());
 }
 
 void	Client::clearClient() {
