@@ -355,6 +355,14 @@ int	Server::privmsg(std::vector<std::string> params, Client &client) {
 	std::vector<Channel>::iterator itChannel;
 	std::vector<Client>::iterator itClient;
 
+	if (params.size() < 2)
+	{
+		response = ":" + this->getHostname() + " " + "412" + " " + client.getNickname() + " :No text to send\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
+	}
+
 	if (params[0].at(0) == '#') {
 		for(itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
 			if (itChannel->_name == params[0])	{
@@ -948,7 +956,7 @@ int Server::modeUser(std::vector<std::string> params, Client &client)
 	{
 		if (itChannel->isOperatorInChannel(client))
 		{
-			if (params[1] == "+o")
+			if (params[1] == "+o" && params.size() == 3)
 			{
 				itClient = itChannel->findClient(params[2]);
 				if (itClient != itChannel->_clients.end())
@@ -962,7 +970,7 @@ int Server::modeUser(std::vector<std::string> params, Client &client)
 				else
 					return (EXIT_SUCCESS);
 			}
-			else if (params[1] == "-o")
+			else if (params[1] == "-o" && params.size() == 3)
 			{
 				itClient = itChannel->findOperator(params[2]);
 				if (itClient != itChannel->_clients.end())
@@ -974,12 +982,12 @@ int Server::modeUser(std::vector<std::string> params, Client &client)
 				else
 					response = ":" + this->getHostname() + " " + ERR_USERNOTINCHANNEL + " " + client.getNickname() + " " + params[2] + " :They aren't on that channel\r\n";
 			}
-			else if (params[1] == "+i")
+			else if (params[1] == "+i" && params.size() == 2)
 			{
 				itChannel->addMode('i');
 				response = ":" + client.getNickname() + " MODE " + params[0] + " +i\r\n";
 			}
-			else if (params[1] == "-i")
+			else if (params[1] == "-i" && params.size() == 2)
 			{
 				itChannel->removeMode('i');
 				response = ":" + client.getNickname() + " MODE " + params[0] + " -i\r\n";
