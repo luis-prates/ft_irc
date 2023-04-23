@@ -369,7 +369,8 @@ int	Server::privmsg(std::vector<std::string> params, Client &client) {
 				// message to channel
 				for (size_t i = 1; i < params.size(); i++)
 						msg += params[i] + " ";
-				msg.erase(msg.size() - 1);
+				if (msg.empty())
+					msg.erase(msg.size() - 1);
 				// Reply to the client to send message to channel
 				response = ":" + client.getNickname() + " PRIVMSG " + itChannel->getName() + " " + msg + "\r\n";
 				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
@@ -436,7 +437,8 @@ int	Server::notice(std::vector<std::string> params, Client &client)
 			if (itChannel != _channels.end() && (itChannel->isClientInChannel(client) || itChannel->isOperatorInChannel(client))) {
 				for (size_t i = 1; i < params.size(); i++)
 					response += params[i] + " ";
-				response.erase(response.size() - 1);
+				if (response.empty())
+					response.erase(response.size() - 1);
 				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " " + response + "\r\n";
 				for (itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
 					// Don't send the response to the sender
@@ -459,7 +461,8 @@ int	Server::notice(std::vector<std::string> params, Client &client)
 			if (itClient != _clients.end()) {
 				for (size_t i = 1; i < params.size(); i++)
 					response += params[i] + " ";
-				response.erase(response.size() - 1);
+				if (response.empty())
+					response.erase(response.size() - 1);
 				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getNickname() + " NOTICE " + params[0] + " " + response + "\r\n";
 				if (sendMessage(itClient->getSocketFd(), response) == -1)
 					return (EXIT_FAILURE);
@@ -554,7 +557,8 @@ int	Server::user(std::vector<std::string> params, Client &client) {
 		client.setUsername(params[0]);
 		for (size_t i = 3; i < params.size(); i++)
 			realName += params[i] + " ";
-		realName.erase(realName.size() - 1);
+		if (!realName.empty())
+			realName.erase(realName.size() - 1);
 		client.setRealname(realName);
 		client.setRegistered(true);
 		this->rpl_Welcome(client);
@@ -745,7 +749,8 @@ int Server::quit(std::vector<std::string> params, Client &client)
 	else {
 		for (size_t i = 0; i < params.size(); i++)
 			response += params[i] + " ";
-		response.erase(response.size() - 1);
+		if (response.empty())
+			response.erase(response.size() - 1);
 		response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " QUIT " + response + "\r\n";
 	}
 	for (std::vector<Channel>::iterator itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
