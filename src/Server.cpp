@@ -377,7 +377,6 @@ Channel* Server::getChannel(std::string channelName) {
 
 int	Server::who(std::vector<std::string> params, Client &client) {
 	std::string responseNames;
-	std::string responseWho;
 
 	for(std::vector<Channel>::iterator itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
 		std::cout << "Channel: " << itChannel->getName() << "\n";
@@ -519,7 +518,10 @@ int	Server::notice(std::vector<std::string> params, Client &client)
 		}
 	}
 	else {
-		response = ":" + this->getHostname() + " " + ERR_NOTREGISTERED + " " + client.getNickname() + " :You have not registered\r\n";
+		if (client.getNickname().empty())
+			response = ":" + this->getHostname() + " " + ERR_NOTREGISTERED + " * :You have not registered\r\n";
+		else
+			response = ":" + this->getHostname() + " " + ERR_NOTREGISTERED + " " + client.getNickname() + " :You have not registered\r\n";
 	}
 	if (sendMessage(client.getSocketFd(), response) == -1)
 		return (EXIT_FAILURE);
@@ -545,7 +547,7 @@ int	Server::part(std::vector<std::string> params, Client &client) {
 						break;
 			}
 			if (itClient == itChannel->_operators.end())
-				response = ":" + this->getHostname() + " 442 " + itClient->getNickname() + " " + itChannel->getName() + " :You're not on that channel\r\n";
+				response = ":" + this->getHostname() + " " + ERR_NOTONCHANNEL + " " + itClient->getNickname() + " " + itChannel->getName() + " :You're not on that channel\r\n";
 			else
 				// Reply to the client to confirm the part
 				response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " PART " + itChannel->getName() + "\r\n";
@@ -821,33 +823,38 @@ int Server::joinChannel( std::vector<std::string> params, Client &client) {
 
 	if (params.size() != 1)
 	{
-		response = "Error: channel name cannot contain spaces\r\n";
-		sendMessage(client.getSocketFd(), response);
-		return (EXIT_FAILURE);
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + itClient->getNickname() + " JOIN :Incorrect number of arguments\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
 	}
 
 	// check if the client is registered
 	if (!client.isRegistered())
 	{
-		response = "Error: you must be registered to join a channel\r\n";
-		sendMessage(client.getSocketFd(), response);
-		return (EXIT_FAILURE);
+		if (client.getNickname().empty())
+			response = ":" + this->getHostname() + " " + ERR_NOTREGISTERED + " * :You have not registered\r\n";
+		else
+			response = ":" + this->getHostname() + " " + ERR_NOTREGISTERED + " " + client.getNickname() + " :You have not registered\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
 	}
 
-	// TODO: Check proper error message to client
 	if (params[0].find(',') != std::string::npos)
 	{
-		response = "Error: channel name cannot contain commas\r\n";
-		sendMessage(client.getSocketFd(), response);
-		return (EXIT_FAILURE);
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + itClient->getNickname() + " JOIN :Invalid channel name (comma not allowed)\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
 	}
 
-	// TODO: Check proper error message to client
 	if (params[0].find('\a') != std::string::npos)
 	{
-		response = "Error: channel name cannot contain control G/BEL\r\n";
-		sendMessage(client.getSocketFd(), response);
-		return (EXIT_FAILURE);
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + itClient->getNickname() + " JOIN :Channel name cannot contain control G/BEL\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
 	}
 
 	// create a channel object and add it to the list of channels
