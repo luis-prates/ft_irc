@@ -45,6 +45,8 @@ std::string Channel::getMode() {
 	return response;
 }
 
+std::vector<char> Channel::getModeVector() { return (_mode); }
+
 void	Channel::addMode(char mode) {
 	std::vector<char>::iterator	itChannel;
 
@@ -94,6 +96,14 @@ bool	Channel::isOperatorInChannel(Client client) {
 bool	Channel::isOperatorInChannel(std::string nickname) {
 	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
 		if (it->getNickname() == nickname)
+			return (true);
+	}
+	return (false);
+}
+
+bool	Channel::isModeSet(char mode) {
+	for (std::vector<char>::iterator it = this->_mode.begin(); it != this->_mode.end(); ++it) {
+		if (*it == mode)
 			return (true);
 	}
 	return (false);

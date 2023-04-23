@@ -37,12 +37,14 @@ public:
 	void							setTopic(std::string topic);
 	std::string						getName();
 	std::string						getMode();
+	std::vector<char>				getModeVector();
 	void							addMode(char mode);
 	void							removeMode(char mode);
 	bool							isClientInChannel(Client client);
 	bool							isClientInChannel(std::string nickname);
 	bool							isOperatorInChannel(Client client);
 	bool							isOperatorInChannel(std::string nickname);
+	bool							isModeSet(char mode);
 	std::vector<Client>::iterator	findClient(Client client);
 	std::vector<Client>::iterator	findClient(std::string nickname);
 	std::vector<Client>::iterator	findOperator(Client client);

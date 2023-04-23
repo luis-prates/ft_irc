@@ -223,6 +223,7 @@ int	Server::handleCommands(std::string message, Client &client)
 	commandMap["quit"] = &Server::quit;
 	commandMap["pass"] = &Server::pass;
 	commandMap["mode"] = &Server::mode;
+	commandMap["invite"] = &Server::invite;
 	/* commandMap["topic"] = &Server::topic;
 	commandMap["kick"] = &Server::kick; */
 
@@ -634,10 +635,94 @@ int Server::invite(std::vector<std::string> params, Client &client)
 			return (EXIT_FAILURE);
 		return (EXIT_SUCCESS);
 	}
-	else
+	std::string	channelName = params[1];
+	std::string	nickname = params[0];
+	std::vector<Channel>::iterator	itChannel;
+
+	itChannel = this->getChannelIterator(channelName);
+	if (itChannel == _channels.end())
 	{
-		std::string	channelName = params[0];
-		std::string	nickname = params[1];
+		response = ":" + this->getHostname() + " " + ERR_NOSUCHCHANNEL + " " + client.getNickname() + " " + channelName + " :No such channel\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
+	}
+	if (itChannel->isModeSet('i'))
+	{
+		if (!itChannel->isOperatorInChannel(client.getNickname()))
+		{
+			response = ":" + this->getHostname() + " " + ERR_CHANOPRIVSNEEDED + " " + client.getNickname() + " " + channelName + " :You're not channel operator\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
+			return (EXIT_SUCCESS);
+		}
+		else if (!itChannel->isClientInChannel(nickname))
+		{
+			std::vector<Client>::iterator	itClient;
+			itClient = this->getClientIterator(nickname);
+			if (itClient == _clients.end())
+			{
+				response = ":" + this->getHostname() + " " + ERR_NOSUCHNICK + " " + client.getNickname() + " " + nickname + " :No such nick/channel\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+			else
+			{
+				response = ":" + client.getNickname() + " INVITE " + nickname + " " + channelName + "\r\n";
+				if (sendMessage(itClient->getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+		}
+		else
+		{
+			response = ":" + this->getHostname() + " " + ERR_USERONCHANNEL + " " + client.getNickname() + " " + nickname + " " + channelName + " :is already on channel\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
+			return (EXIT_SUCCESS);
+		}
+		//TODO: put in join
+		/* else
+		{
+			response = ":" + this->getHostname() + " " + ERR_INVITEONLYCHAN + " " + client.getNickname() + " " + channelName + " :Cannot join channel (+i)\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
+			return (EXIT_SUCCESS);
+		} */
+	}
+	else if (!itChannel->isModeSet('i'))
+	{
+		if (!itChannel->isClientInChannel(nickname))
+		{
+			std::vector<Client>::iterator	itClient;
+			itClient = this->getClientIterator(nickname);
+			if (itClient == _clients.end())
+			{
+				response = ":" + this->getHostname() + " " + ERR_NOSUCHNICK + " " + client.getNickname() + " " + nickname + " :No such nickname\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+			else
+			{
+				response = ":" + client.getNickname() + " INVITE " + nickname + " " + channelName + "\r\n";
+				if (sendMessage(itClient->getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+		}
+		else
+		{
+			response = ":" + this->getHostname() + " " + ERR_USERONCHANNEL + " " + client.getNickname() + " " + nickname + " " + channelName + " :is already on channel\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
+			return (EXIT_SUCCESS);
+		}
+	}
+
+	/* else
+	{
 		std::vector<Client>::iterator	itClient;
 		std::vector<Channel>::iterator	itChannel;
 
@@ -645,7 +730,7 @@ int Server::invite(std::vector<std::string> params, Client &client)
 		{
 			if (itChannel->getName() == channelName)
 			{
-				if (!itChannel->isClientInChannel(client))
+				if (!itChannel->isClientInChannel(nickname) && !itChannel->isOperatorInChannel(nickname))
 				{
 					response = ":" + this->getHostname() + " " + ERR_NOTONCHANNEL + " " + client.getNickname() + " " + channelName + " :You're not on that channel\r\n";
 					if (sendMessage(client.getSocketFd(), response) == -1)
@@ -682,7 +767,7 @@ int Server::invite(std::vector<std::string> params, Client &client)
 		if (sendMessage(client.getSocketFd(), response) == -1)
 			return (EXIT_FAILURE);
 		return (EXIT_SUCCESS);
-	}
+	} */
 	return (EXIT_SUCCESS);
 }
 
