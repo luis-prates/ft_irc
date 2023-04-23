@@ -3,6 +3,7 @@
 
 # include "../includes/Channel.hpp"
 # include "irc.hpp"
+# include <map>
 
 # define SERVERNAME "ircserv"
 
@@ -88,5 +89,7 @@ class Server
 		};
 		
 };
+
+typedef int (Server::*commandHandler)(std::vector<std::string>, Client &);
 
 #endif

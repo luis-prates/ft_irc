@@ -208,9 +208,23 @@ int	Server::handleClientInput(Client &client)
 // used for testing with HexChat client
 int	Server::handleCommands(std::string message, Client &client)
 {
-	std::string command;
-	std::vector<std::string> params;
-	std::string response;
+	std::string					command;
+	std::vector<std::string>	params;
+	std::string					response;
+	std::map<std::string, commandHandler> commandMap;
+
+	commandMap["nick"] = &Server::handleNick;
+	commandMap["user"] = &Server::user;
+	commandMap["join"] = &Server::joinChannel;
+	commandMap["who"] = &Server::who;
+	commandMap["privmsg"] = &Server::privmsg;
+	commandMap["notice"] = &Server::notice;
+	commandMap["part"] = &Server::part;
+	commandMap["quit"] = &Server::quit;
+	commandMap["pass"] = &Server::pass;
+	/* commandMap["mode"] = &Server::mode;
+	commandMap["topic"] = &Server::topic;
+	commandMap["kick"] = &Server::kick; */
 
 	// check if the message is a command
 	// get the command
@@ -219,31 +233,13 @@ int	Server::handleCommands(std::string message, Client &client)
 	// get the parameters
 	params = split(message.substr(message.find(' ') + 1), ' ');
 	// check if the command is valid
-	if (command == "nick")
-		return (handleNick(params, client));
-	// The syntax for this command is "USER <username> <hostname> <servername> <realname>
-	// For example, "USER John localhost irc.example.com John Doe".
-	else if (command == "user")
-		return (user(params, client));
-	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
-	else if (command == "join")
-		return (joinChannel(params, client));
-	//else if (command == "mode")
-	//	return (mode(params[0], client));
-	else if (command == "who")
-		return (who(params, client));
-	else if (command == "privmsg")
-		return (privmsg(params, client));
-	else if (command == "notice")
-		return (notice(params, client));
-	else if (command == "part")
-		return (part(params, client));
-	else if (command == "quit")
-		return (quit(params, client));
-	else if (command == "pass")
-		return (pass(params, client));
-	//else if (command == "kick")
-	//	return (kick(params[0], client));
+	std::map<std::string, commandHandler>::iterator it = commandMap.find(command);
+	if (it != commandMap.end())
+	{
+		// call the command handler
+		// this is a pointer to the function in the map
+		(this->*(it->second))(params, client);
+	}
 	else
 		return (invalidCommand(command, client));
 	return (EXIT_SUCCESS);
