@@ -63,7 +63,8 @@
 	#define RPL_MOTDSTART
 	#define RPL_NAMREPLY			"353"
 	#define RPL_NOMOTD
-	#define RPL_TOPIC
+	#define RPL_NOTOPIC				"331"
+	#define RPL_TOPIC				"332"
 	#define RPL_UMODEIS				"221"
 	#define RPL_WHOISCHANNELS
 	#define RPL_WHOISIDLE

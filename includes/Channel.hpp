@@ -23,7 +23,7 @@ public:
 	explicit Channel(std::string name, Client client): _name(name)
 	{
 		_operators.push_back(client);
-		_topic = "No topic is set";
+		_topic = "";
 		_mode.push_back('n');
 		_mode.push_back('t');
 	}

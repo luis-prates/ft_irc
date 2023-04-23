@@ -308,9 +308,9 @@ int	Server::rpl_Join(Client client, Channel &newChannel) {
 	}
 	// RPL_TOPIC
 	if (newChannel.getTopic() != "")
-		response = newChannel.getName() + " :" + newChannel.getTopic() + "\r\n";
+		response = ":" + this->getHostname() + " " + RPL_TOPIC + " " + client.getNickname() + " " + newChannel.getName() + " " + newChannel.getTopic() + "\r\n";
 	else
-		response = newChannel.getName() + " :No topic is set\r\n";
+		response = ":" + this->getHostname() + " " + RPL_NOTOPIC + " " + client.getNickname() + " " + newChannel.getName() + " :No topic is set\r\n";
 	if (sendMessage(client.getSocketFd(), response) == -1)
 		return (EXIT_FAILURE);
 	return (EXIT_SUCCESS);
@@ -732,10 +732,69 @@ int Server::topic(std::vector<std::string> params, Client &client)
 		return (EXIT_SUCCESS);
 	}
 	else if (params.size() == 1) {
-		return 1;//(topicOneParam(params, client));
+		std::vector<Channel>::iterator itChannel = this->getChannelIterator(params[0]);
+		if (itChannel != _channels.end()) {
+			if (itChannel->getTopic().empty()) {
+				response = ":" + this->getHostname() + " " + RPL_NOTOPIC + " " + client.getNickname() + " " + params[0] + " :No topic is set\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+			else {
+				response = ":" + this->getHostname() + " " + RPL_TOPIC + " " + client.getNickname() + " " + params[0] + " " + itChannel->getTopic() + "\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+		}
+		else {
+			response = ":" + this->getHostname() + " " + ERR_NOSUCHCHANNEL + " " + client.getNickname() + " " + params[0] + " :No such channel\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
+			return (EXIT_SUCCESS);
+		}
 	}
 	else {
-		return 1;//(topicTwoParams(params, client));
+		std::vector<Channel>::iterator	itChannel = this->getChannelIterator(params[0]);
+		std::string						topic;
+		if (itChannel != _channels.end()) {
+			if (itChannel->isOperatorInChannel(client.getNickname())) {
+				for	(size_t i = 1; i < params.size(); ++i)
+					topic += params[i] + " ";
+				if (!topic.empty())
+					itChannel->setTopic(topic.substr(0, topic.size() - 1));
+				response = ":" + client.getNickname() + "!" + client.getUsername() + client.getIpAddress() + " TOPIC " + params[0] + " " + topic + "\r\n";
+				for (std::vector<Client>::iterator itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
+					if (itChannel->isClientInChannel(itClient->getNickname()))
+						if (sendMessage(itClient->getSocketFd(), response) == -1)
+							return (EXIT_FAILURE);
+				}
+				for (std::vector<Client>::iterator itOperator = itChannel->_operators.begin(); itOperator != itChannel->_operators.end(); ++itOperator) {
+					if (itChannel->isOperatorInChannel(itOperator->getNickname()))
+						if (sendMessage(itOperator->getSocketFd(), response) == -1)
+							return (EXIT_FAILURE);
+				}
+				return (EXIT_SUCCESS);
+			}
+			else if (itChannel->isClientInChannel(client.getNickname())) {
+				response = ":" + this->getHostname() + " " + ERR_CHANOPRIVSNEEDED + " " + client.getNickname() + " " + params[0] + " :You're not channel operator\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+			else {
+				response = ":" + this->getHostname() + " " + ERR_NOTONCHANNEL + " " + client.getNickname() + " " + params[0] + " :You're not on that channel\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+		}
+		else {
+			response = ":" + this->getHostname() + " " + ERR_NOSUCHCHANNEL + " " + client.getNickname() + " " + params[0] + " :No such channel\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
+			return (EXIT_SUCCESS);
+		}
 	}
 	
 }
@@ -985,7 +1044,6 @@ int	Server::createNewChannel(std::string channelName, Client &client) {
 		return (EXIT_FAILURE);
 	Channel newChannel(channelName, client);
 	Server::_channels.push_back(newChannel);
-	std::cout << "Channel " << newChannel.getName() << " created\n";
 	response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " MODE :" + channelName + " +o " + client.getNickname() + "\r\n";
 	if (sendMessage(client.getSocketFd(), response) == -1)
 		return (EXIT_FAILURE);
