@@ -406,6 +406,14 @@ int	Server::privmsg(std::vector<std::string> params, Client &client) {
 	if (params[0].at(0) == '#') {
 		for(itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
 			if (itChannel->_name == params[0])	{
+				if (!itChannel->isClientInChannel(client) && !itChannel->isOperatorInChannel(client))
+				{
+					// :hostname 404 nickname #channel :Cannot send to channel
+					response = ":" + this->getHostname() + " 404 " + client.getNickname() + " " + params[0] + " :Cannot send to channel\r\n";
+					if (sendMessage(client.getSocketFd(), response) == -1)
+						return (EXIT_FAILURE);
+					return (EXIT_SUCCESS);
+				}
 				// message to channel
 				for (int i = 1; i < params.size(); i++)
 						msg += params[i] + " ";
@@ -473,7 +481,7 @@ int	Server::notice(std::vector<std::string> params, Client &client)
 		if (params[0].at(0) == '#') {
 			// message to channel
 			itChannel = getChannelIterator(params[0]);
-			if (itChannel != _channels.end() && itChannel->isClientInChannel(client)) {
+			if (itChannel != _channels.end() && (itChannel->isClientInChannel(client) || itChannel->isOperatorInChannel(client))) {
 				for (int i = 1; i < params.size(); i++)
 					response += params[i] + " ";
 				response.erase(response.size() - 1);
