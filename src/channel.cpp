@@ -45,6 +45,28 @@ std::string Channel::getMode() {
 	return response;
 }
 
+void	Channel::addMode(char mode) {
+	std::vector<char>::iterator	itChannel;
+
+	for (itChannel = this->_mode.begin(); itChannel != this->_mode.end(); ++itChannel) {
+		if (*itChannel == mode)
+			break;
+	}
+	if (itChannel == this->_mode.end())
+		this->_mode.push_back(mode);
+}
+
+void	Channel::removeMode(char mode) {
+	std::vector<char>::iterator	itChannel;
+
+	for (itChannel = this->_mode.begin(); itChannel != this->_mode.end(); ++itChannel) {
+		if (*itChannel == mode)
+			break;
+	}
+	if (itChannel != this->_mode.end())
+		this->_mode.erase(itChannel);
+}
+
 bool	Channel::isClientInChannel(Client client) {
 	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
 		if (it->getNickname() == client.getNickname())

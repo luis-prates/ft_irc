@@ -37,6 +37,8 @@ public:
 	void							setTopic(std::string topic);
 	std::string						getName();
 	std::string						getMode();
+	void							addMode(char mode);
+	void							removeMode(char mode);
 	bool							isClientInChannel(Client client);
 	bool							isClientInChannel(std::string nickname);
 	bool							isOperatorInChannel(Client client);

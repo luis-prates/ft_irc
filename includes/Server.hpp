@@ -44,6 +44,7 @@ class Server
 		int								user(std::vector<std::string> params, Client &client);
 		int								pass(std::vector<std::string> params, Client &client);
 		int 							mode(std::vector<std::string> params, Client &client);
+		int								invite(std::vector<std::string> params, Client &client);
 		int								invalidCommand(std::string command, Client &client);
 
 		void 							channelMode(std::string channelName, Client &client);
@@ -56,6 +57,7 @@ class Server
 		void							cleanClientFromServer(Client &client);
 		//int								displayUserModes(std::string params, Client &client);
 		int								modeUser(std::vector<std::string> params, Client &client);
+		int								handleNotRegistered(Client &client);
 
 
 	public:

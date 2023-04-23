@@ -599,12 +599,7 @@ int	Server::pass(std::vector<std::string> params, Client &client)
 int Server::mode(std::vector<std::string> params, Client &client)
 {
 	if (!client.isRegistered())
-	{
-		std::string	response = ":" + this->getHostname() + " " + ERR_NOTREGISTERED + " " + client.getNickname() + " :You have not registered\r\n";
-		if (sendMessage(client.getSocketFd(), response) == -1)
-			return (EXIT_FAILURE);
-		return (EXIT_SUCCESS);
-	}
+		return (handleNotRegistered(client));
 	if (params.size() == 0)
 	{
 		std::string	response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + client.getNickname() + " MODE :Not enough parameters\r\n";
@@ -622,6 +617,71 @@ int Server::mode(std::vector<std::string> params, Client &client)
 	else
 	{
 		return (modeUser(params, client));
+	}
+	return (EXIT_SUCCESS);
+}
+
+int Server::invite(std::vector<std::string> params, Client &client)
+{
+	std::string	response;
+
+	if (!client.isRegistered())
+		return (handleNotRegistered(client));
+	if (params.size() < 2)
+	{
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + client.getNickname() + " INVITE :Not enough parameters\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
+	}
+	else
+	{
+		std::string	channelName = params[0];
+		std::string	nickname = params[1];
+		std::vector<Client>::iterator	itClient;
+		std::vector<Channel>::iterator	itChannel;
+
+		for (itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel)
+		{
+			if (itChannel->getName() == channelName)
+			{
+				if (!itChannel->isClientInChannel(client))
+				{
+					response = ":" + this->getHostname() + " " + ERR_NOTONCHANNEL + " " + client.getNickname() + " " + channelName + " :You're not on that channel\r\n";
+					if (sendMessage(client.getSocketFd(), response) == -1)
+						return (EXIT_FAILURE);
+					return (EXIT_SUCCESS);
+				}
+				for (itClient = _clients.begin(); itClient != _clients.end(); ++itClient)
+				{
+					if (itClient->getNickname() == nickname)
+					{
+						if (itChannel->isClientInChannel(*itClient))
+						{
+							response = ":" + this->getHostname() + " " + ERR_USERONCHANNEL + " " + client.getNickname() + " " + nickname + " " + channelName + " :is already on channel\r\n";
+							if (sendMessage(client.getSocketFd(), response) == -1)
+								return (EXIT_FAILURE);
+							return (EXIT_SUCCESS);
+						}
+						else
+						{
+							response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " INVITE " + nickname + " " + channelName + "\r\n";
+							if (sendMessage(itClient->getSocketFd(), response) == -1)
+								return (EXIT_FAILURE);
+						}
+						return (EXIT_SUCCESS);
+					}
+				}
+				response = ":" + this->getHostname() + " " + ERR_NOSUCHNICK + " " + client.getNickname() + " " + nickname + " :No such nick/channel\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+		}
+		response = ":" + this->getHostname() + " " + ERR_NOSUCHCHANNEL + " " + client.getNickname() + " " + channelName + " :No such channel\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
 	}
 	return (EXIT_SUCCESS);
 }
@@ -800,16 +860,16 @@ int Server::modeUser(std::vector<std::string> params, Client &client)
 				else
 					response = ":" + this->getHostname() + " " + ERR_USERNOTINCHANNEL + " " + client.getNickname() + " " + params[2] + " :They aren't on that channel\r\n";
 			}
-			/* else if (params[1] == "+i")
+			else if (params[1] == "+i")
 			{
-				itChannel->setMode("i");
+				itChannel->addMode('i');
 				response = ":" + client.getNickname() + " MODE " + params[0] + " +i\r\n";
 			}
 			else if (params[1] == "-i")
 			{
-				itChannel->setMode("");
+				itChannel->removeMode('i');
 				response = ":" + client.getNickname() + " MODE " + params[0] + " -i\r\n";
-			} */
+			}
 			else
 			//TODO: check this reply
 				return (this->invalidCommand("MODE " + params[1], client));
@@ -836,6 +896,16 @@ int Server::modeUser(std::vector<std::string> params, Client &client)
 		if (sendMessage(client.getSocketFd(), response) == -1)
 			return (EXIT_FAILURE);
 	}
+	return (EXIT_SUCCESS);
+}
+
+int Server::handleNotRegistered(Client &client)
+{
+	std::string	response;
+
+	response = ":" + this->getHostname() + " " + ERR_NOTREGISTERED + " " + client.getNickname() + " :You have not registered\r\n";
+	if (sendMessage(client.getSocketFd(), response) == -1)
+		return (EXIT_FAILURE);
 	return (EXIT_SUCCESS);
 }
 
