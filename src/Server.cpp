@@ -194,17 +194,8 @@ int	Server::handleClientInput(Client &client)
 	{
 		std::cout << "Host disconnected, ip: " << client.getIpAddress() << \
 				" port:" << client.getPort() << std::endl;
-				
-		//Close the socket and mark as 0 in list for reuse
-		close(client.getSocketFd());
-		FD_CLR(client.getSocketFd(), &_readFds);
-		for (int j = 0; j < _channels.size(); j++)
-		{
-			_channels[j].removeClient(client);
-			_channels[j].removeOp(client);
-			std::remove(_clients.begin(), _clients.end(), client);
-		}
-		client.clearClient();
+		
+		cleanClientFromServer(client);
 	}
 	//Echo back the message that came in 
 	else 
@@ -290,22 +281,7 @@ int	Server::handleCommands(std::string message, Client &client)
 	else if (command == "part")
 		part(params, client);
 	else if (command == "quit")
-	{
-		// check if the client is registered
-		if (!client.isRegistered())
-		{
-			response = "Error: you must set a nickname before quitting\r\n";
-			//TODO: may need to protect this better
-			if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-			return (0);
-		}
-		response = "Goodbye!\r\n";
-		//TODO: may need to protect this better
-		if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-		return 1;
-	}
+		return (quit(params, client));
 	else if (command == "pass")
 		return (pass(params, client));
 	//else if (command == "kick")
@@ -642,6 +618,36 @@ int	Server::pass(std::vector<std::string> params, Client &client)
 	}
 }
 
+int Server::quit(std::vector<std::string> params, Client &client)
+{
+	std::string	response;
+
+	if (params.size() == 0)
+		response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " QUIT :Client Quit\r\n";
+	else {
+		for (int i = 0; i < params.size(); i++)
+			response += params[i] + " ";
+		response.erase(response.size() - 1);
+		response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " QUIT " + response + "\r\n";
+	}
+	for (std::vector<Channel>::iterator itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
+		if (itChannel->isClientInChannel(client) || itChannel->isOperatorInChannel(client)) {
+			for (std::vector<Client>::iterator itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
+				if (client.getNickname() != itClient->getNickname())
+					if (sendMessage(itClient->getSocketFd(), response) == -1)
+						return (EXIT_FAILURE);
+			}
+			for (std::vector<Client>::iterator itOperator = itChannel->_operators.begin(); itOperator != itChannel->_operators.end(); ++itOperator) {
+				if (client.getNickname() != itOperator->getNickname())
+					if (sendMessage(itOperator->getSocketFd(), response) == -1)
+						return (EXIT_FAILURE);
+			}
+		}
+	}
+	cleanClientFromServer(client);
+	return (EXIT_SUCCESS);
+}
+
 void	Server::kick(std::string channel_name, Client &client)
 {
 	bool kick = false;
@@ -696,6 +702,25 @@ std::vector<Channel>::iterator	Server::getChannelIterator(std::string channelNam
 	return (_channels.end());
 }
 
+void Server::cleanClientFromServer(Client &client)
+{
+	std::vector<Client>::iterator itClient;
+
+	//Close the socket and mark as 0 in list for reuse
+	close(client.getSocketFd());
+	FD_CLR(client.getSocketFd(), &_readFds);
+	for (int j = 0; j < _channels.size(); j++)
+	{
+		_channels[j].removeClient(client);
+		_channels[j].removeOp(client);
+		itClient = this->getClientIterator(client.getNickname());
+		if (itClient != _clients.end())
+			_clients.erase(itClient);
+	}
+	//client.clearClient();
+	std::cout << "Client disconnected\n";
+}
+
 int	Server::rpl_Welcome(const Client &client)
 {
 	std::string	response;
@@ -703,7 +728,7 @@ int	Server::rpl_Welcome(const Client &client)
 	response = ":" + this->getHostname() + " 001 " + client.getNickname() + " :" + WELCOME + " " + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + "\r\n";
 	response += ":" + this->getHostname() + " 002 " + client.getNickname() + " :Your host is " + this->getHostname() + ", running version 0.6\r\n";
 	response += ":" + this->getHostname() + " 003 " + client.getNickname() + " :This server was created sometime in the near future\r\n";
-	response += ":" + this->getHostname() + " 004 " + client.getNickname() + " " + this->getHostname() + " 0.6 insert channel modes\r\n";
+	// response += ":" + this->getHostname() + " 004 " + client.getNickname() + " " + this->getHostname() + " 0.6 insert channel modes\r\n";
 	if (sendMessage(client.getSocketFd(), response) == -1)
 		return (EXIT_FAILURE);
 	return (EXIT_SUCCESS);

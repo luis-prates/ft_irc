@@ -53,6 +53,7 @@ class Server
 		std::vector<Client>::iterator	getClientIterator(std::string nickname);
 		std::vector<Channel>::iterator	getChannelIterator(std::string channelName);
 		void 							mode(std::string channel_name, Client &client);
+		void							cleanClientFromServer(Client &client);
 
 
 	public:
