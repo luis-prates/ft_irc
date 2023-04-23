@@ -294,7 +294,7 @@ int	Server::handleNick(std::vector<std::string> params, Client &client)
 
 
 // Reply to the client to confirm the join
-int	Server::rpl_Join(Client client, Channel newChannel) {
+int	Server::rpl_Join(Client client, Channel &newChannel) {
 	std::string	response;
 
 	response = ":" + client.getNickname() + " JOIN " + newChannel.getName() + "\r\n";
@@ -316,13 +316,13 @@ int	Server::rpl_Join(Client client, Channel newChannel) {
 	return (EXIT_SUCCESS);
 }
 
-Channel* Server::getChannel(std::string channelName) {
+std::vector<Channel>::iterator	Server::getChannel(std::string channelName) {
 	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
 		if (it->_name == channelName)	{
-			return &(*it);
+			return (it);
 		}
 	}
-	return (NULL);
+	return (_channels.end());
 }
 
 int	Server::who(std::vector<std::string> params, Client &client) {
@@ -670,6 +670,7 @@ int Server::invite(std::vector<std::string> params, Client &client)
 			else
 			{
 				response = ":" + client.getNickname() + " INVITE " + nickname + " " + channelName + "\r\n";
+				itChannel->addInvited(nickname);
 				if (sendMessage(itClient->getSocketFd(), response) == -1)
 					return (EXIT_FAILURE);
 				return (EXIT_SUCCESS);
@@ -682,18 +683,10 @@ int Server::invite(std::vector<std::string> params, Client &client)
 				return (EXIT_FAILURE);
 			return (EXIT_SUCCESS);
 		}
-		//TODO: put in join
-		/* else
-		{
-			response = ":" + this->getHostname() + " " + ERR_INVITEONLYCHAN + " " + client.getNickname() + " " + channelName + " :Cannot join channel (+i)\r\n";
-			if (sendMessage(client.getSocketFd(), response) == -1)
-				return (EXIT_FAILURE);
-			return (EXIT_SUCCESS);
-		} */
 	}
 	else if (!itChannel->isModeSet('i'))
 	{
-		if (!itChannel->isClientInChannel(nickname))
+		if (!itChannel->isClientInChannel(nickname) && !itChannel->isOperatorInChannel(nickname))
 		{
 			std::vector<Client>::iterator	itClient;
 			itClient = this->getClientIterator(nickname);
@@ -720,54 +713,6 @@ int Server::invite(std::vector<std::string> params, Client &client)
 			return (EXIT_SUCCESS);
 		}
 	}
-
-	/* else
-	{
-		std::vector<Client>::iterator	itClient;
-		std::vector<Channel>::iterator	itChannel;
-
-		for (itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel)
-		{
-			if (itChannel->getName() == channelName)
-			{
-				if (!itChannel->isClientInChannel(nickname) && !itChannel->isOperatorInChannel(nickname))
-				{
-					response = ":" + this->getHostname() + " " + ERR_NOTONCHANNEL + " " + client.getNickname() + " " + channelName + " :You're not on that channel\r\n";
-					if (sendMessage(client.getSocketFd(), response) == -1)
-						return (EXIT_FAILURE);
-					return (EXIT_SUCCESS);
-				}
-				for (itClient = _clients.begin(); itClient != _clients.end(); ++itClient)
-				{
-					if (itClient->getNickname() == nickname)
-					{
-						if (itChannel->isClientInChannel(*itClient))
-						{
-							response = ":" + this->getHostname() + " " + ERR_USERONCHANNEL + " " + client.getNickname() + " " + nickname + " " + channelName + " :is already on channel\r\n";
-							if (sendMessage(client.getSocketFd(), response) == -1)
-								return (EXIT_FAILURE);
-							return (EXIT_SUCCESS);
-						}
-						else
-						{
-							response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " INVITE " + nickname + " " + channelName + "\r\n";
-							if (sendMessage(itClient->getSocketFd(), response) == -1)
-								return (EXIT_FAILURE);
-						}
-						return (EXIT_SUCCESS);
-					}
-				}
-				response = ":" + this->getHostname() + " " + ERR_NOSUCHNICK + " " + client.getNickname() + " " + nickname + " :No such nick/channel\r\n";
-				if (sendMessage(client.getSocketFd(), response) == -1)
-					return (EXIT_FAILURE);
-				return (EXIT_SUCCESS);
-			}
-		}
-		response = ":" + this->getHostname() + " " + ERR_NOSUCHCHANNEL + " " + client.getNickname() + " " + channelName + " :No such channel\r\n";
-		if (sendMessage(client.getSocketFd(), response) == -1)
-			return (EXIT_FAILURE);
-		return (EXIT_SUCCESS);
-	} */
 	return (EXIT_SUCCESS);
 }
 
@@ -1027,7 +972,8 @@ bool	Server::checkChannel(std::string channelName, Client &client){
 	std::vector<Channel>::iterator it;
 	for(it = Server::_channels.begin(); it != Server::_channels.end(); ++it) {
 		if (it->_name == channelName)	{
-			it->addClient(client);
+			if (!it->isModeSet('i'))
+				it->addClient(client);
 			return (true);
 		}
 	}
@@ -1098,7 +1044,21 @@ int Server::joinChannel( std::vector<std::string> params, Client &client) {
 	if (params[0][0] == '#') {
 		if (!checkChannel(channelName, client))
 			createNewChannel(channelName, client);
-		rpl_Join(client, *Server::getChannel(channelName));
+		std::vector<Channel>::iterator itChannel = getChannel(channelName);
+		if (!itChannel->isModeSet('i'))
+			rpl_Join(client, *itChannel);
+		else {
+			if (itChannel->isInvited(client.getNickname())) {
+				itChannel->addClient(client);
+				rpl_Join(client, *itChannel);
+			}
+			else {
+				response = ":" + this->getHostname() + " " + ERR_INVITEONLYCHAN + " " + client.getNickname() + " " + channelName + " :Cannot join channel (+i)\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+		}
 	}
 	else  {
 		response = channelName + ":No such channel\r\n";

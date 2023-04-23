@@ -109,6 +109,48 @@ bool	Channel::isModeSet(char mode) {
 	return (false);
 }
 
+bool	Channel::isInvited(Client client) {
+	for (std::vector<std::string>::iterator it = _invited.begin(); it != _invited.end(); ++it) {
+		if (*it == client.getNickname())
+			return (true);
+	}
+	return (false);
+}
+
+bool	Channel::isInvited(std::string nickname) {
+	for (std::vector<std::string>::iterator it = _invited.begin(); it != _invited.end(); ++it) {
+		if (*it == nickname)
+			return (true);
+	}
+	return (false);
+}
+
+void	Channel::addInvited(Client client) {
+	_invited.push_back(client.getNickname());
+}
+
+void	Channel::addInvited(std::string nickname) {
+	_invited.push_back(nickname);
+}
+
+void	Channel::removeInvited(Client client) {
+	for (std::vector<std::string>::iterator it = _invited.begin(); it != _invited.end(); ++it) {
+		if (*it == client.getNickname()) {
+			_invited.erase(it);
+			return;
+		}
+	}
+}
+
+void	Channel::removeInvited(std::string nickname) {
+	for (std::vector<std::string>::iterator it = _invited.begin(); it != _invited.end(); ++it) {
+		if (*it == nickname) {
+			_invited.erase(it);
+			return;
+		}
+	}
+}
+
 std::vector<Client>::iterator	Channel::findClient(Client client) {
 	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
 		if (it->getNickname() == client.getNickname())
