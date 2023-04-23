@@ -225,7 +225,7 @@ int	Server::handleCommands(std::string message, Client &client)
 	commandMap["mode"] = &Server::mode;
 	commandMap["invite"] = &Server::invite;
 	commandMap["topic"] = &Server::topic;
-	//commandMap["kick"] = &Server::kick;
+	commandMap["kick"] = &Server::kick;
 
 	// check if the message is a command
 	// get the command
@@ -830,10 +830,82 @@ int Server::quit(std::vector<std::string> params, Client &client)
 	return (EXIT_SUCCESS);
 }
 
-void	Server::kick(std::string channelName, Client &client)
+int	Server::kick(std::vector<std::string> params, Client &client)
 {
-	(void) channelName;
-	(void) client;
+	std::string	response;
+
+	if (params.size() < 2) {
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + client.getNickname() + " KICK :Not enough parameters\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
+	}
+	std::vector<Channel>::iterator	itChannel = this->getChannelIterator(params[0]);
+	if (itChannel != _channels.end())
+	{
+		if (itChannel->isOperatorInChannel(client.getNickname()))
+		{
+			std::vector<Client>::iterator	itClient = this->getClientIterator(params[1]);
+			if (itClient != _clients.end())
+			{
+				if (itChannel->isClientInChannel(itClient->getNickname()))
+				{
+					if (params.size() == 2)
+						response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " KICK " + params[0] + " " + params[1] + " :Kicked by " + client.getNickname() + "\r\n";
+					else
+					{
+						for (size_t i = 2; i < params.size(); i++)
+							response += params[i] + " ";
+						if (response.empty())
+							response.erase(response.size() - 1);
+						response = ":" + client.getNickname() + "!" + client.getUsername() + "@" + client.getIpAddress() + " KICK " + params[0] + " " + params[1] + " " + response + "\r\n";
+					}
+					for (std::vector<Client>::iterator itClient = itChannel->_clients.begin(); itClient != itChannel->_clients.end(); ++itClient) {
+						if (itChannel->isClientInChannel(itClient->getNickname()))
+							if (sendMessage(itClient->getSocketFd(), response) == -1)
+								return (EXIT_FAILURE);
+					}
+					for (std::vector<Client>::iterator itOperator = itChannel->_operators.begin(); itOperator != itChannel->_operators.end(); ++itOperator) {
+						if (itChannel->isOperatorInChannel(itOperator->getNickname()))
+							if (sendMessage(itOperator->getSocketFd(), response) == -1)
+								return (EXIT_FAILURE);
+					}
+					itChannel->removeClient(*itClient);
+					itChannel->removeOp(*itClient);
+					return (EXIT_SUCCESS);
+				}
+				else
+				{
+					response = ":" + this->getHostname() + " " + ERR_USERNOTINCHANNEL + " " + client.getNickname() + " " + params[1] + " " + params[0] + " :They aren't on that channel\r\n";
+					if (sendMessage(client.getSocketFd(), response) == -1 || sendMessage(itClient->getSocketFd(), response) == -1)
+						return (EXIT_FAILURE);
+					return (EXIT_SUCCESS);
+				}
+			}
+			else
+			{
+				response = ":" + this->getHostname() + " " + ERR_NOSUCHNICK + " " + client.getNickname() + " " + params[1] + " :No such nickname\r\n";
+				if (sendMessage(client.getSocketFd(), response) == -1)
+					return (EXIT_FAILURE);
+				return (EXIT_SUCCESS);
+			}
+		}
+		else
+		{
+			response = ":" + this->getHostname() + " " + ERR_CHANOPRIVSNEEDED + " " + client.getNickname() + " " + params[0] + " :You're not channel operator\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return (EXIT_FAILURE);
+			return (EXIT_SUCCESS);
+		}
+	}
+	else
+	{
+		response = ":" + this->getHostname() + " " + ERR_NOSUCHCHANNEL + " " + client.getNickname() + " " + params[0] + " :No such channel\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
+	}
+
 	//bool kick = false;
 	/*kick = removeOp(victim);
 	if (kick == false)
@@ -948,7 +1020,7 @@ int Server::modeUser(std::vector<std::string> params, Client &client)
 	{
 		if (itChannel->isOperatorInChannel(client))
 		{
-			if (params[1] == "+o")
+			if (params[1] == "+o" && params.size() == 3)
 			{
 				itClient = itChannel->findClient(params[2]);
 				if (itClient != itChannel->_clients.end())
@@ -962,7 +1034,7 @@ int Server::modeUser(std::vector<std::string> params, Client &client)
 				else
 					return (EXIT_SUCCESS);
 			}
-			else if (params[1] == "-o")
+			else if (params[1] == "-o" && params.size() == 3)
 			{
 				itClient = itChannel->findOperator(params[2]);
 				if (itClient != itChannel->_clients.end())
@@ -974,12 +1046,12 @@ int Server::modeUser(std::vector<std::string> params, Client &client)
 				else
 					response = ":" + this->getHostname() + " " + ERR_USERNOTINCHANNEL + " " + client.getNickname() + " " + params[2] + " :They aren't on that channel\r\n";
 			}
-			else if (params[1] == "+i")
+			else if (params[1] == "+i" && params.size() == 2)
 			{
 				itChannel->addMode('i');
 				response = ":" + client.getNickname() + " MODE " + params[0] + " +i\r\n";
 			}
-			else if (params[1] == "-i")
+			else if (params[1] == "-i" && params.size() == 2)
 			{
 				itChannel->removeMode('i');
 				response = ":" + client.getNickname() + " MODE " + params[0] + " -i\r\n";
@@ -1133,6 +1205,7 @@ int Server::joinChannel( std::vector<std::string> params, Client &client) {
 		else {
 			if (itChannel->isInvited(client.getNickname())) {
 				itChannel->addClient(client);
+				itChannel->removeInvited(client.getNickname());
 				rpl_Join(client, *itChannel);
 			}
 			else {

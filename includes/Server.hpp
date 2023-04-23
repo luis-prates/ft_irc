@@ -40,7 +40,7 @@ class Server
 		int								notice(std::vector<std::string> params, Client &client);
 		int								part(std::vector<std::string> params, Client &client);
 		int								quit(std::vector<std::string> params, Client &client);
-		void							kick(std::string channelName, Client &client);
+		int								kick(std::vector<std::string> params, Client &client);
 		int								user(std::vector<std::string> params, Client &client);
 		int								pass(std::vector<std::string> params, Client &client);
 		int 							mode(std::vector<std::string> params, Client &client);
