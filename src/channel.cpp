@@ -1,39 +1,49 @@
-	#include "../includes/Channel.hpp"
-	#include "../includes/Server.hpp"
-	
-	void Channel::addClient(Client client) {
-		_clients.push_back(client);
-	}
+#include "../includes/Channel.hpp"
+#include "../includes/Server.hpp"
 
-	void Channel::addOperator(Client op) {
-		_operators.push_back(op);
-	}
+void Channel::addClient(Client client) {
+	_clients.push_back(client);
+}
 
-	bool	Channel::removeClient(Client client) {
-		for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
-			if (it->getNickname() == client.getNickname()) {
-				_clients.erase(it);
-				return (true);
-			}
+void Channel::addOperator(Client op) {
+	_operators.push_back(op);
+}
+
+bool	Channel::removeClient(Client client) {
+	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		if (it->getNickname() == client.getNickname()) {
+			_clients.erase(it);
+			return (true);
 		}
-		return (false);
 	}
+	return (false);
+}
 
-	bool Channel::removeOp(Client op)	{
-		for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
-			if (it->getNickname() == op.getNickname()) {
-				_operators.erase(it);
-				return (true);
-			}
+bool Channel::removeOp(Client op)	{
+	for (std::vector<Client>::iterator it = _operators.begin(); it != _operators.end(); ++it) {
+		if (it->getNickname() == op.getNickname()) {
+			_operators.erase(it);
+			return (true);
 		}
-		return (false);
 	}
+	return (false);
+}
 
-	std::string Channel::getTopic() { return (_topic); }
+std::string Channel::getTopic() { return (_topic); }
 
-	void Channel::setTopic(std::string topic) { _topic = topic; }
+void Channel::setTopic(std::string topic) { _topic = topic; }
 
-	std::string Channel::getName() { return (_name); }
+std::string Channel::getName() { return (_name); }
+
+std::string Channel::getMode() {
+	std::string response = "+";
+
+	for (std::vector<char>::iterator it = this->_mode.begin(); it != this->_mode.end(); ++it) {
+		if (*it == ':') break;
+		response += *it;
+	}
+	return response;
+}
 
 bool	Channel::isClientInChannel(Client client) {
 	for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {

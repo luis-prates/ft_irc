@@ -267,24 +267,24 @@ int	Server::handleCommands(std::string message, Client &client)
 	}
 	// check if the command is valid
 	if (command == "nick")
-		handleNick(params, client);
+		return (handleNick(params, client));
 	// The syntax for this command is "USER <username> <hostname> <servername> <realname>
 	// For example, "USER John localhost irc.example.com John Doe".
 	else if (command == "user")
-		user(params, client);
+		return (user(params, client));
 	// The syntax for this command is "JOIN <channel>". For example, "JOIN #general"
 	else if (command == "join")
 		return (joinChannel(params, client));
-	else if (command == "mode")
-		mode(params[0], client);
+	//else if (command == "mode")
+	//	return (mode(params[0], client));
 	else if (command == "who")
-		who(params, client);
+		return (who(params, client));
 	else if (command == "privmsg")
-		privmsg(params, client);
+		return (privmsg(params, client));
 	else if (command == "notice")
-		notice(params, client);
+		return (notice(params, client));
 	else if (command == "part")
-		part(params, client);
+		return (part(params, client));
 	else if (command == "quit")
 		return (quit(params, client));
 	else if (command == "pass")
@@ -723,6 +723,20 @@ std::vector<Channel>::iterator	Server::getChannelIterator(std::string channelNam
 	return (_channels.end());
 }
 
+void Server::mode(std::string channel_name, Client &client) {
+	std::string response;
+	for(std::vector<Channel>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+		if (it->_name == channel_name) {
+			response = ":" + this->getHostname() + " " + RPL_CHANNELMODEIS + " " + client.getNickname() + " " + it->_name + " " + it->getMode() + "\r\n";
+			if (sendMessage(client.getSocketFd(), response) == -1)
+				return ;
+		}
+		else
+			response = "Channel not found\n";
+	}	
+
+}
+
 void Server::cleanClientFromServer(Client &client)
 {
 	std::vector<Client>::iterator itClient;
@@ -738,7 +752,6 @@ void Server::cleanClientFromServer(Client &client)
 		if (itClient != _clients.end())
 			_clients.erase(itClient);
 	}
-	//client.clearClient();
 	std::cout << "Client disconnected\n";
 }
 

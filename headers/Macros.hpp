@@ -50,6 +50,7 @@
 	#define RPL_MYINFO				"004"
 	
 	#define RPL_AWAY
+	#define RPL_CHANNELMODEIS		"324"
 	#define RPL_ENDOFMOTD
 	#define RPL_ENDOFNAMES			"366"
 	#define RPL_ENDOFWHO			"315"
