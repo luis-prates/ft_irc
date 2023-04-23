@@ -198,12 +198,13 @@ int	Server::handleClientInput(Client &client)
 		//Close the socket and mark as 0 in list for reuse
 		close(client.getSocketFd());
 		FD_CLR(client.getSocketFd(), &_readFds);
-		client.clearClient();
 		for (int j = 0; j < _channels.size(); j++)
 		{
-			if (_channels[j].removeClient(client))
-				std::cout << "Removed client from channel: " << _channels[j].getName() << std::endl;
+			_channels[j].removeClient(client);
+			_channels[j].removeOp(client);
+			std::remove(_clients.begin(), _clients.end(), client);
 		}
+		client.clearClient();
 	}
 	//Echo back the message that came in 
 	else 

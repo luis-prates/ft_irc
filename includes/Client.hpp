@@ -8,6 +8,8 @@ class Client
 {
 	public:
 		explicit							Client(int socketFd);
+
+		bool								operator==(const Client& client) const;
 		
 		int									getSocketFd() const;
 		void								setSocketFd(int socketFd);

@@ -3,6 +3,11 @@
 Client::Client(int socketFd) : _socketFd(socketFd), _isRegistered(false)
 {}
 
+bool Client::operator==(const Client& client) const
+{
+	return _nickname == client._nickname;
+}
+
 int Client::getSocketFd() const
 {
 	return (_socketFd);
