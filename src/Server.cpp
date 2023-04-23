@@ -348,8 +348,14 @@ int	Server::rpl_Join(Client client, Channel newChannel) {
 	std::string	response;
 
 	response = ":" + client.getNickname() + " JOIN " + newChannel.getName() + "\r\n";
-	if (sendMessage(client.getSocketFd(), response) == -1)
-		return (EXIT_FAILURE);
+	for (std::vector<Client>::iterator itClient = newChannel._clients.begin(); itClient != newChannel._clients.end(); ++itClient) {
+		if (sendMessage(itClient->getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+	}
+	for (std::vector<Client>::iterator itOperator = newChannel._operators.begin(); itOperator != newChannel._operators.end(); ++itOperator) {
+		if (sendMessage(itOperator->getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+	}
 	// RPL_TOPIC
 	if (newChannel.getTopic() != "")
 		response = newChannel.getName() + " :" + newChannel.getTopic() + "\r\n";
