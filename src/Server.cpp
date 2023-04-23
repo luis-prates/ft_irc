@@ -355,6 +355,14 @@ int	Server::privmsg(std::vector<std::string> params, Client &client) {
 	std::vector<Channel>::iterator itChannel;
 	std::vector<Client>::iterator itClient;
 
+	if (params.size() < 2)
+	{
+		response = ":" + this->getHostname() + " " + "412" + " " + client.getNickname() + " :No text to send\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
+	}
+
 	if (params[0].at(0) == '#') {
 		for(itChannel = _channels.begin(); itChannel != _channels.end(); ++itChannel) {
 			if (itChannel->_name == params[0])	{
