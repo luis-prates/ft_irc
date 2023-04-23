@@ -224,8 +224,8 @@ int	Server::handleCommands(std::string message, Client &client)
 	commandMap["pass"] = &Server::pass;
 	commandMap["mode"] = &Server::mode;
 	commandMap["invite"] = &Server::invite;
-	/* commandMap["topic"] = &Server::topic;
-	commandMap["kick"] = &Server::kick; */
+	commandMap["topic"] = &Server::topic;
+	//commandMap["kick"] = &Server::kick;
 
 	// check if the message is a command
 	// get the command
@@ -506,7 +506,8 @@ int	Server::part(std::vector<std::string> params, Client &client) {
 			if (response.find("PART") != std::string::npos) {
 				for (size_t i = 1; i < params.size(); i++)
 					msg += params[i] + " ";
-				msg.erase(msg.size() - 1);
+				if (!msg.empty())
+					msg.erase(msg.size() - 1);
 				msg = ":" + client.getNickname() + "!" + client.getNickname() + "@" + client.getIpAddress() + " PART " + itChannel->getName() + " :" + msg + "\r\n";
 				if (itChannel->isClientInChannel(client))
 					itChannel->_clients.erase(itClient);
@@ -714,6 +715,25 @@ int Server::invite(std::vector<std::string> params, Client &client)
 		}
 	}
 	return (EXIT_SUCCESS);
+}
+
+int Server::topic(std::vector<std::string> params, Client &client)
+{
+	std::string	response;
+
+	if (params.size() == 0) {
+		response = ":" + this->getHostname() + " " + ERR_NEEDMOREPARAMS + " " + client.getNickname() + " TOPIC :Not enough parameters\r\n";
+		if (sendMessage(client.getSocketFd(), response) == -1)
+			return (EXIT_FAILURE);
+		return (EXIT_SUCCESS);
+	}
+	else if (params.size() == 1) {
+		return 1;//(topicOneParam(params, client));
+	}
+	else {
+		return 1;//(topicTwoParams(params, client));
+	}
+	
 }
 
 int Server::quit(std::vector<std::string> params, Client &client)
